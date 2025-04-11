@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.13.35931.197 d17.13
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cousework", "Cousework\Cousework.csproj", "{CDD40E4A-5340-42A8-AE19-C849A743956C}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CDD40E4A-5340-42A8-AE19-C849A743956C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CDD40E4A-5340-42A8-AE19-C849A743956C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CDD40E4A-5340-42A8-AE19-C849A743956C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CDD40E4A-5340-42A8-AE19-C849A743956C}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D34146E6-8B76-4221-8CCB-5BDFAB1BA9C3}
+	EndGlobalSection
+EndGlobal

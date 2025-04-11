@@ -1,0 +1,16 @@
+# Ignore build and VS files
+**/bin/
+**/obj/
+**/.vs/
+*.user
+*.suo
+*.cache
+*.log
+*.pdb
+*.dbmdl
+*.exe
+*.dll
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
