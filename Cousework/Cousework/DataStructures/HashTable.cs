@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Cousework.Models;
 
 namespace Cousework.DataStructures
@@ -24,55 +21,68 @@ namespace Cousework.DataStructures
 
         private int GetHash(T key)
         {
-            return Math.Abs(key.GetHashCode()) % _capacity; // This gives us an index based on the hash code of the key.
+            return Math.Abs(key.GetHashCode()) % _capacity;
         }
 
         public void Insert(T key)
         {
-            int index = GetHash(key); // Get the index using the hash function
-            Console.WriteLine($"Inserting key: {key} at index {index}");  // Debug line
-
-            // Handle collisions using linear probing
-            while (_buckets[index] != null && !_buckets[index].Equals(key))
-            {
-                index = (index + 1) % _capacity; // Find the next index if the spot is taken
-            }
-
-            // Insert the element if there's an empty spot
-            if (_buckets[index] == null)
-            {
-                _buckets[index] = key; // Insert the key into the table
-                _size++; // Increase the size of the table
-                Console.WriteLine($"Inserted {key} at index {index}"); // Debug line
-            }
-
-            // Check if resizing is needed
-            if (ShouldResize())
-            {
-                Resize();
-            }
-        }
-
-        public T Get(int index)
-        {
-            return _buckets[index];
-        }
-
-        public bool Contains(T key)
-        {
             int index = GetHash(key);
+            Console.WriteLine($"Inserting key: {key} at index {index}");
 
+            // Handle collisions with linear probing
             while (_buckets[index] != null)
             {
                 if (_buckets[index].Equals(key))
                 {
-                    return true;
+                    // Update the value if it already exists
+                    _buckets[index] = key;
+                    Console.WriteLine($"Updated {key} at index {index}");
+                    return;
                 }
-
                 index = (index + 1) % _capacity;
             }
 
-            return false;
+            _buckets[index] = key;
+            _size++;
+            Console.WriteLine($"Inserted {key} at index {index}");
+
+            if (ShouldResize()) Resize();
+        }
+
+        public void Remove(T key)
+        {
+            int index = GetHash(key);
+            while (_buckets[index] != null)
+            {
+                if (_buckets[index].Equals(key))
+                {
+                    _buckets[index] = default(T); // Set the bucket to default
+                    _size--;
+                    Console.WriteLine($"Removed {key} from index {index}");
+                    return;
+                }
+                index = (index + 1) % _capacity;
+            }
+            Console.WriteLine($"Key {key} not found.");
+        }
+
+        public T GetByKey(T key)
+        {
+            int index = GetHash(key);
+            while (_buckets[index] != null)
+            {
+                if (_buckets[index].Equals(key))
+                {
+                    return _buckets[index];
+                }
+                index = (index + 1) % _capacity;
+            }
+            return default(T);
+        }
+
+        public bool Contains(T key)
+        {
+            return !Equals(GetByKey(key), default(T));
         }
 
         public void DisplayContents()
@@ -81,45 +91,11 @@ namespace Cousework.DataStructures
             {
                 if (_buckets[i] != null)
                 {
-                    // Assuming T is of type Owner, you can customize this based on your generic type T
-                    var owner = (Owner)(object)_buckets[i]; // Cast to Owner
-                    Console.WriteLine($"Index {i}: OwnerId: {owner.OwnerId}, Name: {owner.Name}, Email: {owner.Email}, Phone: {owner.Phone}, Address: {owner.Address}");
+                    Console.WriteLine($"Index {i}: {_buckets[i]}");
                 }
             }
         }
 
-        private void Resize()
-        {
-            // Resize logic here (doubling the size, rehashing existing keys, etc.)
-        }
-
-        // Check if resizing is needed based on load factor
-        private bool ShouldResize()
-        {
-            return (float)_size / _capacity > _loadFactor;
-        }
-
-        // Add the Count property to return the number of elements in the table
-        public int Count()
-        {
-            return _size;
-        }
-
-        // Allow access to the table like an array (if you want to get the elements by index)
-        public T this[int index]
-        {
-            get
-            {
-                if (index < 0 || index >= _capacity)
-                {
-                    throw new IndexOutOfRangeException("Index out of range");
-                }
-
-                return _buckets[index];
-            }
-        }
-
-        
         public IEnumerable<T> GetAllElements()
         {
             for (int i = 0; i < _buckets.Length; i++)
@@ -131,6 +107,72 @@ namespace Cousework.DataStructures
             }
         }
 
-    }
+        private bool ShouldResize()
+        {
+            return (float)_size / _capacity > _loadFactor;
+        }
 
+        private void Resize()
+        {
+            Console.WriteLine("Resizing HashTable...");
+            int newCapacity = _capacity * 2;
+            T[] oldBuckets = _buckets;
+
+            _capacity = newCapacity;
+            _buckets = new T[_capacity];
+            _size = 0;
+
+            foreach (var item in oldBuckets)
+            {
+                if (item != null)
+                {
+                    Insert(item);
+                }
+            }
+        }
+
+        public int Count()
+        {
+            return _size;
+        }
+
+        public T this[int index]
+        {
+            get
+            {
+                if (index < 0 || index >= _capacity)
+                    throw new IndexOutOfRangeException("Index out of range");
+                return _buckets[index];
+            }
+            set
+            {
+                if (index < 0 || index >= _capacity)
+                    throw new IndexOutOfRangeException("Index out of range");
+                _buckets[index] = value;
+            }
+        }
+
+
+        // Add the Update method
+        public bool Update(T updatedItem)
+        {
+            int index = GetHash(updatedItem);
+
+            // Check if the item exists by probing
+            while (_buckets[index] != null)
+            {
+                if (_buckets[index].Equals(updatedItem))
+                {
+                    _buckets[index] = updatedItem; // Update the item
+                    Console.WriteLine($"Updated {updatedItem} at index {index}");
+                    return true;
+                }
+                index = (index + 1) % _capacity;
+            }
+
+            // Return false if the item wasn't found to update
+            Console.WriteLine($"Item to update not found.");
+            return false;
+        }
+    }
 }

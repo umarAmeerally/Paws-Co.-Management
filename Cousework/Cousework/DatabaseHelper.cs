@@ -1,6 +1,8 @@
 ﻿using Cousework.DataStructures;
 using Cousework.Models;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Linq;
 
 namespace Cousework
 {
@@ -39,6 +41,46 @@ namespace Cousework
             }
         }
 
+        public static void SavePetsToDatabase(HashTable<Pet> petTable, string connectionString)
+        {
+            var optionsBuilder = new DbContextOptionsBuilder<PetCareContext>();
+            optionsBuilder.UseSqlServer(connectionString);
 
+            using (var context = new PetCareContext(optionsBuilder.Options))
+            {
+                foreach (var pet in petTable.GetAllElements())
+                {
+                    Console.WriteLine($"Processing pet: {pet.PetId}, {pet.Name}, OwnerId: {pet.OwnerId}");
+
+                    // Only add if the owner exists
+                    var ownerExists = context.Owners.Any(o => o.OwnerId == pet.OwnerId);
+                    if (!ownerExists)
+                    {
+                        Console.WriteLine($"Skipping pet {pet.Name} as OwnerId {pet.OwnerId} does not exist in DB.");
+                        continue;
+                    }
+
+                    var existingPet = context.Pets.FirstOrDefault(p => p.PetId == pet.PetId);
+
+                    if (existingPet == null)
+                    {
+                        context.Pets.Add(pet);
+                        Console.WriteLine("Adding new pet.");
+                    }
+                    else
+                    {
+                        existingPet.Name = pet.Name;
+                        existingPet.Species = pet.Species;
+                        existingPet.Breed = pet.Breed;
+                        existingPet.Age = pet.Age;
+                        existingPet.OwnerId = pet.OwnerId;
+                        Console.WriteLine("Updating existing pet.");
+                    }
+                }
+
+                context.SaveChanges();
+                Console.WriteLine("Pets successfully saved to the database.");
+            }
+        }
     }
 }

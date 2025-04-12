@@ -54,4 +54,10 @@ public partial class Pet
     [ForeignKey("OwnerId")]
     [InverseProperty("Pets")]
     public virtual Owner? Owner { get; set; }
+
+    public override string ToString()
+    {
+        return $"PetId: {PetId}, Name: {Name}, Species: {Species}, Breed: {Breed}, Age: {Age}, OwnerId: {OwnerId}";
+    }
+
 }

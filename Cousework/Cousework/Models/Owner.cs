@@ -37,4 +37,11 @@ public partial class Owner
 
     [InverseProperty("Owner")]
     public virtual ICollection<Pet> Pets { get; set; } = new List<Pet>();
+
+    public override string ToString()
+    {
+        return $"OwnerId: {OwnerId}, Name: {Name}, Email: {Email}, Phone: {Phone}, Address: {Address}";
+    }
 }
+
+
