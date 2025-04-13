@@ -60,8 +60,9 @@ namespace Cousework
                 Console.WriteLine("4. Delete owner");
                 Console.WriteLine("5. Display all pets");
                 Console.WriteLine("6. Add new pet");
-                Console.WriteLine("7. Exit");
-                Console.WriteLine("8. Save all data to database");
+                Console.WriteLine("7. Update a  pet");
+                Console.WriteLine("8. Exit");
+                Console.WriteLine("9. Save all data to database");
                 Console.Write("Choose an option: ");
 
                 string choice = Console.ReadLine();
@@ -110,16 +111,33 @@ namespace Cousework
                         break;
 
                     case "6":
-                        var newPet = CreatePetFromInput(ownerService); // Pass ownerService!
+                        var newPet = CreatePetFromInput(ownerService , petService , context); // Pass ownerService!
                         if (newPet != null)
                             petService.AddPet(newPet);
                         break;
 
                     case "7":
+                        Console.Write("Enter Pet ID to update: ");
+                        if (int.TryParse(Console.ReadLine(), out int petIdToUpdate))
+                        {
+                            var updatedPet = CreateUpdatedPetFromInput(petService, petIdToUpdate);
+                            if (updatedPet != null)
+                            {
+                                petService.UpdatePet(petIdToUpdate, updatedPet);
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("Invalid Pet ID.");
+                        }
+                        break;
+
+
+                    case "8":
                         Console.WriteLine("Exiting...");
                         return;
 
-                    case "8":
+                    case "9":
                         Console.WriteLine("Saving owners and pets to the database...");
 
                         string connectionString = "Data Source=HP;Initial Catalog=Cousework;Integrated Security=True;Trust Server Certificate=True";
@@ -166,7 +184,7 @@ namespace Cousework
             };
         }
 
-        static Pet CreatePetFromInput(OwnerService ownerService)
+        static Pet CreatePetFromInput(OwnerService ownerService , PetService petService , PetCareContext context , int? existingPetId = null) 
         {
             Console.Write("Enter Pet Name: ");
             string name = Console.ReadLine();
@@ -207,9 +225,11 @@ namespace Cousework
             int.TryParse(Console.ReadLine(), out int ownerId);
 
             // --- Create and return Pet object ---
+
             return new Pet
             {
-                PetId = new Random().Next(1000, 9999),
+                PetId = petService.GenerateTrulyUniquePetId(context),
+
                 Name = name,
                 Species = species,
                 Breed = breed,
@@ -217,5 +237,57 @@ namespace Cousework
                 OwnerId = ownerId
             };
         }
+
+        static Pet CreateUpdatedPetFromInput(PetService petService, int petId)
+        {
+            var existingPet = petService.GetPetHashTable().GetAllElements()
+                                        .FirstOrDefault(p => p.PetId == petId);
+
+            if (existingPet == null)
+            {
+                Console.WriteLine("Pet not found.");
+                return null;
+            }
+
+            Console.WriteLine($"Updating Pet: {existingPet.Name} (ID: {existingPet.PetId})");
+
+            Console.Write($"Enter Pet Name ({existingPet.Name}): ");
+            string name = Console.ReadLine();
+            name = string.IsNullOrWhiteSpace(name) ? existingPet.Name : name;
+
+            Console.Write($"Enter Species ({existingPet.Species}): ");
+            string species = Console.ReadLine();
+            species = string.IsNullOrWhiteSpace(species) ? existingPet.Species : species;
+
+            Console.Write($"Enter Breed ({existingPet.Breed}): ");
+            string breed = Console.ReadLine();
+            breed = string.IsNullOrWhiteSpace(breed) ? existingPet.Breed : breed;
+
+            Console.Write($"Enter Age ({existingPet.Age}): ");
+            string ageInput = Console.ReadLine();
+            int age = string.IsNullOrWhiteSpace(ageInput) ? existingPet.Age ?? 0 : int.Parse(ageInput);
+
+
+            Console.Write($"Enter Gender ({existingPet.Gender}): ");
+            string gender = Console.ReadLine();
+            gender = string.IsNullOrWhiteSpace(gender) ? existingPet.Gender : gender;
+
+            Console.Write($"Enter Medical History ({existingPet.MedicalHistory}): ");
+            string history = Console.ReadLine();
+            history = string.IsNullOrWhiteSpace(history) ? existingPet.MedicalHistory : history;
+
+            return new Pet
+            {
+                PetId = existingPet.PetId,
+                OwnerId = existingPet.OwnerId,
+                Name = name,
+                Species = species,
+                Breed = breed,
+                Age = age,
+                Gender = gender,
+                MedicalHistory = history
+            };
+        }
+
     }
 }

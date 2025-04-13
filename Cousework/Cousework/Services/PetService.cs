@@ -1,6 +1,7 @@
 ﻿using Cousework.DataStructures;
 using Cousework.Models;
 using System;
+using System.Linq;
 
 namespace Cousework.Services
 {
@@ -17,23 +18,13 @@ namespace Cousework.Services
 
         public void AddPet(Pet newPet)
         {
-            bool ownerExists = false;
-
-            foreach (var owner in _ownerTable.GetAllElements())
-            {
-                if (owner.OwnerId == newPet.OwnerId)
-                {
-                    ownerExists = true;
-                    break;
-                }
-            }
+            bool ownerExists = _ownerTable.GetAllElements().Any(o => o.OwnerId == newPet.OwnerId);
 
             if (!ownerExists)
             {
                 Console.WriteLine($"Owner with ID {newPet.OwnerId} does not exist. Cannot add pet.");
                 return;
             }
-
 
             _petTable.Insert(newPet);
             Console.WriteLine("Pet added successfully.");
@@ -57,7 +48,7 @@ namespace Cousework.Services
                     pet.Age = updatedPet.Age;
                     pet.Gender = updatedPet.Gender;
                     pet.MedicalHistory = updatedPet.MedicalHistory;
-                    Console.WriteLine("Pet updated successfully.");
+                    Console.WriteLine($"Pet with ID {petId} updated successfully.");
                     return true;
                 }
             }
@@ -96,8 +87,26 @@ namespace Cousework.Services
             }
         }
 
+        public int GenerateTrulyUniquePetId(PetCareContext context)
+        {
+            Random rand = new Random();
+            int newId;
+            bool exists;
+
+            do
+            {
+                newId = rand.Next(0, 9999);
+
+                bool inHash = _petTable.GetAllElements().Any(p => p.PetId == newId);
+                bool inDb = context.Pets.Any(p => p.PetId == newId);
+
+                exists = inHash || inDb;
+
+            } while (exists);
+
+            return newId;
+        }
 
         public HashTable<Pet> GetPetHashTable() => _petTable;
-
     }
 }

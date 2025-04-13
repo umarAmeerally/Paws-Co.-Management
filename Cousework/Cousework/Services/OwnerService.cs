@@ -84,23 +84,7 @@ namespace Cousework.Services
             return newId;
         }
 
-        public int GenerateUniqueOwnerId()
-        {
-            Random rand = new Random();
-            int newId;
-            bool exists;
-
-            // Keep generating until we find a unique ID
-            do
-            {
-                newId = rand.Next(1000, 9999);
-                exists = _ownerTable.GetAllElements().Any(o => o.OwnerId == newId); // Check if the ID is already in the table
-            }
-            while (exists);
-
-            return newId;
-        }
-
+   
 
         public HashTable<Owner> GetOwnerHashTable() => _ownerTable;
 
