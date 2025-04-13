@@ -83,6 +83,20 @@ namespace Cousework.Services
             return false;
         }
 
+        public void DeletePetsByOwnerId(int ownerId)
+        {
+            var petsToDelete = _petTable.GetAllElements()
+                                        .Where(p => p.OwnerId == ownerId)
+                                        .Select(p => p.PetId)
+                                        .ToList();
+
+            foreach (var petId in petsToDelete)
+            {
+                _petTable.DeleteByKey(petId);
+            }
+        }
+
+
         public HashTable<Pet> GetPetHashTable() => _petTable;
 
     }

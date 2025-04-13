@@ -174,5 +174,29 @@ namespace Cousework.DataStructures
             Console.WriteLine($"Item to update not found.");
             return false;
         }
+
+        public bool DeleteByKey(int key)
+        {
+            for (int i = 0; i < _capacity; i++)
+            {
+                if (_buckets[i] != null)
+                {
+                    var item = _buckets[i];
+                    var idProperty = item.GetType().GetProperty("OwnerId") ?? item.GetType().GetProperty("PetId");
+
+                    if (idProperty != null && (int)idProperty.GetValue(item) == key)
+                    {
+                        _buckets[i] = default(T);
+                        _size--;
+                        Console.WriteLine($"Deleted item with key {key} from index {i}");
+                        return true;
+                    }
+                }
+            }
+
+            Console.WriteLine($"No item with key {key} found.");
+            return false;
+        }
+
     }
 }

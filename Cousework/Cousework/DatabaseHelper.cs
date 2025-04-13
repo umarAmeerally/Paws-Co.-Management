@@ -83,6 +83,30 @@ namespace Cousework
             }
         }
 
+        public static bool DeleteOwnerAndPetsFromDatabase(int ownerId, PetCareContext context)
+        {
+            var owner = context.Owners.Include(o => o.Pets).FirstOrDefault(o => o.OwnerId == ownerId);
+
+            if (owner == null)
+            {
+                Console.WriteLine($"Owner with ID {ownerId} not found in database.");
+                return false;
+            }
+
+            // Delete related pets first (if any)
+            var relatedPets = context.Pets.Where(p => p.OwnerId == ownerId).ToList();
+            if (relatedPets.Any())
+            {
+                context.Pets.RemoveRange(relatedPets);
+                Console.WriteLine($"Deleted {relatedPets.Count} pet(s) linked to owner.");
+            }
+
+            // Now delete the owner
+            context.Owners.Remove(owner);
+            context.SaveChanges();
+            Console.WriteLine($"Owner {owner.Name} (ID: {ownerId}) deleted from database.");
+            return true;
+        }
 
     }
 }

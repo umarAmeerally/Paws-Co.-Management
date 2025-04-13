@@ -86,9 +86,24 @@ namespace Cousework
 
                     case "4":
                         Console.Write("Enter Owner ID to delete: ");
-                        int deleteId = int.Parse(Console.ReadLine());
-                        ownerService.DeleteOwner(deleteId);
+                        if (int.TryParse(Console.ReadLine(), out int deleteId))
+                        {
+                            var confirmed = DatabaseHelper.DeleteOwnerAndPetsFromDatabase(deleteId, context);
+
+                            if (confirmed)
+                            {
+                                // Only remove from hash tables if DB deletion is successful
+                                ownerService.DeleteOwner(deleteId);
+                                petService.DeletePetsByOwnerId(deleteId); // You may need to implement this method
+                                Console.WriteLine("Owner and their pets deleted from hash tables.");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("Invalid ID.");
+                        }
                         break;
+
 
                     case "5":
                         petService.DisplayPets();
