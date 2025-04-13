@@ -3,6 +3,7 @@ using Cousework.Models;
 using Cousework.Services;
 using Cousework.Utils;
 using System;
+using System.Linq;
 
 namespace Cousework
 {
@@ -10,21 +11,43 @@ namespace Cousework
     {
         static void Main(string[] args)
         {
-            string csvPath = "C:\\Users\\thera\\Desktop\\dummy_pets_data.csv"; // Path to your CSV file
-            var csvReader = new CSVReader();
-            csvReader.ParseCSV(csvPath);
+            var context = new PetCareContext(); // EF DB context
+            HashTable<Owner> ownerTable;
+            HashTable<Pet> petTable;
 
-            var ownerTable = csvReader.OwnerHashTable;
-            var petTable = csvReader.PetHashTable;
+            Console.WriteLine("Choose data source:");
+            Console.WriteLine("1. Load data from CSV");
+            Console.WriteLine("2. Load data from Database");
+            Console.Write("Enter choice: ");
+            var input = Console.ReadLine();
+
+            if (input == "1")
+            {
+                string csvPath = "C:\\Users\\thera\\Desktop\\dummy_pets_data.csv";
+                var csvReader = new CSVReader();
+                csvReader.ParseCSV(csvPath);
+
+                ownerTable = csvReader.OwnerHashTable;
+                petTable = csvReader.PetHashTable;
+
+                Console.WriteLine("\nCSV parsed and data loaded into HashTables.");
+            }
+            else
+            {
+                Console.WriteLine("\nLoading data from database...");
+
+                // ✅ Use the new combined method
+                (ownerTable, petTable) = DatabaseLoader.LoadData(context);
+
+                Console.WriteLine("Data loaded from database into HashTables.");
+            }
 
             var ownerService = new OwnerService(ownerTable);
             var petService = new PetService(petTable, ownerTable);
 
-            var context = new PetCareContext(); // Add the DB context
-
-            Console.WriteLine("\nCSV parsed and data loaded into HashTables.");
             RunMenu(ownerService, petService, context);
         }
+
 
         static void RunMenu(OwnerService ownerService, PetService petService, PetCareContext context)
         {
