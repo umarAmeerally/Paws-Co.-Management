@@ -72,7 +72,10 @@ namespace Cousework
                         existingPet.Species = pet.Species;
                         existingPet.Breed = pet.Breed;
                         existingPet.Age = pet.Age;
-                        existingPet.OwnerId = pet.OwnerId;
+                        existingPet.Gender = pet.Gender;
+                        existingPet.MedicalHistory = pet.MedicalHistory;
+                        existingPet.DateRegistered = pet.DateRegistered;
+
                         Console.WriteLine("Updating existing pet.");
                     }
                 }
@@ -126,6 +129,32 @@ namespace Cousework
             Console.WriteLine($"Owner {owner.Name} (ID: {ownerId}) deleted from database.");
             return true;
         }
+
+        public static bool DeletePetAndAppointmentsFromDatabase(int petId, PetCareContext context)
+        {
+            var pet = context.Pets.FirstOrDefault(p => p.PetId == petId);
+
+            if (pet == null)
+            {
+                Console.WriteLine($"Pet with ID {petId} not found in database.");
+                return false;
+            }
+
+            // Delete related appointments
+            var relatedAppointments = context.Appointments.Where(a => a.PetId == petId).ToList();
+            if (relatedAppointments.Any())
+            {
+                context.Appointments.RemoveRange(relatedAppointments);
+                Console.WriteLine($"Deleted {relatedAppointments.Count} appointment(s) linked to pet.");
+            }
+
+            // Now delete the pet
+            context.Pets.Remove(pet);
+            context.SaveChanges();
+            Console.WriteLine($"Pet {pet.Name} (ID: {petId}) deleted from database.");
+            return true;
+        }
+
 
     }
 }

@@ -1,5 +1,6 @@
 ﻿using Cousework.DataStructures;
 using Cousework.Models;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Linq;
 
@@ -9,9 +10,11 @@ namespace Cousework.Services
     {
         private readonly HashTable<Pet> _petTable;
         private readonly HashTable<Owner> _ownerTable;
+        private readonly PetCareContext _context;
 
-        public PetService(HashTable<Pet> petTable, HashTable<Owner> ownerTable)
+        public PetService(PetCareContext context, HashTable<Pet> petTable, HashTable<Owner> ownerTable)
         {
+            _context = context;
             _petTable = petTable;
             _ownerTable = ownerTable;
         }
@@ -36,43 +39,137 @@ namespace Cousework.Services
             _petTable.DisplayContents();
         }
 
-        public bool UpdatePet(int petId, Pet updatedPet)
+
+        public static Pet PromptForPetByOwner(OwnerService ownerService, PetService petService)
         {
-            foreach (var pet in _petTable.GetAllElements())
+            // Prompt user for the owner's name or email
+            Console.Write("Enter part of the owner's name or email: ");
+            string search = Console.ReadLine();
+
+            // Find matching owners
+            var matchingOwners = ownerService
+                .GetOwnerHashTable()
+                .GetAllElements()
+                .Where(o => o.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                            o.Email.Contains(search, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (matchingOwners.Count == 0)
             {
-                if (pet.PetId == petId)
+                Console.WriteLine("No matching owners found.");
+                return null;
+            }
+
+            // Display matching owners
+            Console.WriteLine("\nMatching Owners:");
+            foreach (var owner in matchingOwners)
+            {
+                Console.WriteLine($"ID: {owner.OwnerId}, Name: {owner.Name}, Email: {owner.Email}");
+            }
+
+            // Let the user select the owner from the matching list
+            Console.Write("\nEnter the Owner ID from the above list: ");
+            if (int.TryParse(Console.ReadLine(), out int ownerId))
+            {
+                // Find all pets for this owner
+                var petsOwnedByOwner = petService
+                    .GetPetHashTable()
+                    .GetAllElements()
+                    .Where(p => p.OwnerId == ownerId)
+                    .ToList();
+
+                if (petsOwnedByOwner.Count == 0)
                 {
-                    pet.Name = updatedPet.Name;
-                    pet.Species = updatedPet.Species;
-                    pet.Breed = updatedPet.Breed;
-                    pet.Age = updatedPet.Age; 
-                    pet.Gender = updatedPet.Gender;
-                    pet.MedicalHistory = updatedPet.MedicalHistory;
-                    Console.WriteLine($"Pet with ID {petId} updated successfully.");
-                    return true;
+                    Console.WriteLine("This owner does not have any pets.");
+                    return null;
+                }
+
+                // Display pets for the selected owner
+                Console.WriteLine("\nMatching Pets:");
+                foreach (var pet in petsOwnedByOwner)
+                {
+                    Console.WriteLine($"Pet ID: {pet.PetId}, Name: {pet.Name}, Breed: {pet.Breed}");
+                }
+
+                // Let the user select the pet
+                Console.Write("\nEnter the Pet ID to update: ");
+                if (int.TryParse(Console.ReadLine(), out int petId))
+                {
+                    var petToUpdate = petsOwnedByOwner.FirstOrDefault(p => p.PetId == petId);
+                    return petToUpdate;
                 }
             }
 
-            Console.WriteLine("Pet not found.");
-            return false;
+            return null;
         }
+
+
+        public bool UpdatePet(OwnerService ownerService, PetService petService)
+        {
+            // Prompt user to select the pet by owner's name
+            var petToUpdate = PromptForPetByOwner(ownerService, petService);
+
+            if (petToUpdate == null)
+            {
+                Console.WriteLine("Pet not found or operation cancelled.");
+                return false;
+            }
+
+            // Now update the pet details
+            Console.WriteLine("Updating pet details. Press Enter to keep the current value.\n");
+
+            Console.Write($"Enter Pet Name ({petToUpdate.Name}): ");
+            string name = Console.ReadLine();
+            petToUpdate.Name = string.IsNullOrWhiteSpace(name) ? petToUpdate.Name : name;
+
+            Console.Write($"Enter Species ({petToUpdate.Species}): ");
+            string species = Console.ReadLine();
+            petToUpdate.Species = string.IsNullOrWhiteSpace(species) ? petToUpdate.Species : species;
+
+            Console.Write($"Enter Breed ({petToUpdate.Breed}): ");
+            string breed = Console.ReadLine();
+            petToUpdate.Breed = string.IsNullOrWhiteSpace(breed) ? petToUpdate.Breed : breed;
+
+            Console.Write($"Enter Age ({petToUpdate.Age}): ");
+            string ageInput = Console.ReadLine();
+            if (int.TryParse(ageInput, out int newAge))
+                petToUpdate.Age = newAge;
+
+            Console.Write($"Enter Gender ({petToUpdate.Gender}): ");
+            string gender = Console.ReadLine();
+            petToUpdate.Gender = string.IsNullOrWhiteSpace(gender) ? petToUpdate.Gender : gender;
+
+            Console.Write($"Enter Medical History ({petToUpdate.MedicalHistory}): ");
+            string history = Console.ReadLine();
+            petToUpdate.MedicalHistory = string.IsNullOrWhiteSpace(history) ? petToUpdate.MedicalHistory : history;
+
+            Console.Write($"Enter Date Registered ({petToUpdate.DateRegistered:dd/MM/yyyy}): ");
+            string dateInput = Console.ReadLine();
+            if (DateTime.TryParseExact(dateInput, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out DateTime newDate))
+                petToUpdate.DateRegistered = newDate;
+
+            Console.WriteLine($"Pet with ID {petToUpdate.PetId} updated successfully.");
+            return true;
+        }
+
+
+
+
 
         public bool DeletePet(int petId)
         {
-            for (int i = 0; i < _petTable.Count(); i++)
+            bool isDeleted = _petTable.DeletePetByPetId(petId);
+            if (isDeleted)
             {
-                var pet = _petTable[i];
-                if (pet != null && pet.PetId == petId)
-                {
-                    _petTable[i] = default;
-                    Console.WriteLine("Pet deleted successfully.");
-                    return true;
-                }
+                Console.WriteLine($"Pet with PetId {petId} successfully deleted.");
             }
-
-            Console.WriteLine("Pet not found.");
-            return false;
+            else
+            {
+                Console.WriteLine($"No pet found with PetId {petId}.");
+            }
+            return isDeleted;
         }
+
 
         public void DeletePetsByOwnerId(int ownerId)
         {
@@ -86,6 +183,7 @@ namespace Cousework.Services
                 _petTable.DeleteByKey(petId);
             }
         }
+
 
         public int GenerateTrulyUniquePetId(PetCareContext context)
         {
@@ -108,5 +206,10 @@ namespace Cousework.Services
         }
 
         public HashTable<Pet> GetPetHashTable() => _petTable;
+    
+
+    
+
     }
+
 }

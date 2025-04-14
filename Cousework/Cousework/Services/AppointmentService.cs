@@ -62,9 +62,8 @@ namespace Cousework.Services
             {
                 _appointmentTable.DeleteByKey(appointmentId);
             }
-
-            Console.WriteLine($"Deleted {appointmentsToDelete.Count} appointments for Pet ID: {petId}");
         }
+
 
         public HashTable<Appointment> GetAppointmentHashTable() => _appointmentTable;
     }

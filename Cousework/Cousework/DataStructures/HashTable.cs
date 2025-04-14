@@ -198,5 +198,31 @@ namespace Cousework.DataStructures
             return false;
         }
 
+        public bool DeletePetByPetId(int petId)
+        {
+            for (int i = 0; i < _capacity; i++)
+            {
+                if (_buckets[i] != null)
+                {
+                    var pet = _buckets[i];
+
+                    // Check if the pet has a PetId property
+                    var petIdProperty = pet.GetType().GetProperty("PetId");
+
+                    if (petIdProperty != null && (int)petIdProperty.GetValue(pet) == petId)
+                    {
+                        // Delete the pet by its PetId
+                        _buckets[i] = default(T); // Set the bucket to default (null)
+                        _size--;
+                        Console.WriteLine($"Deleted pet with PetId {petId} at index {i}");
+                        return true;
+                    }
+                }
+            }
+
+            Console.WriteLine($"No pet found with PetId {petId}.");
+            return false;
+        }
+
     }
 }
