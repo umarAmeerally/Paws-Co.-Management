@@ -72,7 +72,8 @@ namespace Cousework
                 Console.WriteLine("9. Exit");
                 Console.WriteLine("10. Save all data to database");
                 Console.WriteLine("11. view appointments");
-                Console.WriteLine("12. add appointments");
+                Console.WriteLine("12. add appointment");
+                Console.WriteLine("13. Update appointment");
 
 
                 Console.Write("Choose an option: ");
@@ -189,6 +190,12 @@ namespace Cousework
 
                     case "12":
                         appointmentService.AddAppointment(petService, ownerService);
+                        break;
+
+                    case "13":
+                        // Update Appointment Status
+                        Console.WriteLine("\n--- Update Appointment Status ---");
+                        appointmentService.UpdateAppointmentStatus(petService, ownerService);
                         break;
 
                     default:

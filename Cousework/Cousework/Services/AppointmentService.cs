@@ -73,6 +73,70 @@ namespace Cousework.Services
             Console.WriteLine("Appointment added successfully.");
         }
 
+        public bool UpdateAppointmentStatus(PetService petService, OwnerService ownerService)
+        {
+            // Prompt for the owner's name or pet's name to find matching appointments
+            Console.Write("Enter part of the owner's name or pet's name: ");
+            string search = Console.ReadLine();
+
+            // Find matching owners or pets
+            var matchingAppointments = _appointmentTable
+                .GetAllElements()
+                .Where(a => petService
+                            .GetPetHashTable()
+                            .GetAllElements()
+                            .Any(p => p.Name.Contains(search, StringComparison.OrdinalIgnoreCase) && p.PetId == a.PetId) ||
+                            ownerService
+                            .GetOwnerHashTable()
+                            .GetAllElements()
+                            .Any(o => o.Name.Contains(search, StringComparison.OrdinalIgnoreCase) && o.OwnerId == a.PetId))
+                .ToList();
+
+            if (matchingAppointments.Count == 0)
+            {
+                Console.WriteLine("No matching appointments found.");
+                return false;
+            }
+
+            // Display the matching appointments
+            Console.WriteLine("\nMatching Appointments:");
+            foreach (var appointment in matchingAppointments)
+            {
+                Console.WriteLine($"Appointment ID: {appointment.AppointmentId}, Pet ID: {appointment.PetId}, Date: {appointment.AppointmentDate.ToShortDateString()}, Status: {appointment.Status}");
+            }
+
+            // Let the user select the appointment based on index
+            Console.Write("\nEnter the Appointment ID from the above list: ");
+            if (int.TryParse(Console.ReadLine(), out int appointmentId))
+            {
+                var appointmentToUpdate = matchingAppointments.FirstOrDefault(a => a.AppointmentId == appointmentId);
+
+                if (appointmentToUpdate != null)
+                {
+                    // Valid status options
+                    string[] validStatuses = { "Scheduled", "Completed", "Cancelled" };
+
+                    // Prompt the user for the new status
+                    Console.Write("Enter new Appointment Status (Scheduled, Completed, Cancelled): ");
+                    string status = Console.ReadLine();
+
+                    // Validate the status input
+                    if (!validStatuses.Contains(status))
+                    {
+                        Console.WriteLine("Invalid status entered.");
+                        return false;
+                    }
+
+                    // Update only the status
+                    appointmentToUpdate.Status = status;
+                    Console.WriteLine("Appointment status updated successfully.");
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
 
         public void DisplayAppointments()
         {

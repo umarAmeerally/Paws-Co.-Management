@@ -87,23 +87,47 @@ namespace Cousework
 
         public static void SaveAppointmentsToDatabase(HashTable<Appointment> appointmentTable, string connectionString)
         {
-            using (var context = new PetCareContext())
-            {
-                var appointments = appointmentTable.GetAllElements();
+            var optionsBuilder = new DbContextOptionsBuilder<PetCareContext>();
+            optionsBuilder.UseSqlServer(connectionString);
 
-                foreach (var appointment in appointments)
+            using (var context = new PetCareContext(optionsBuilder.Options))
+            {
+                foreach (var appointment in appointmentTable.GetAllElements())
                 {
-                    // Only add if not already in DB (based on unique AppointmentId)
-                    bool exists = context.Appointments.Any(a => a.AppointmentId == appointment.AppointmentId);
-                    if (!exists)
+                    Console.WriteLine($"Processing appointment: {appointment.AppointmentId}, PetId: {appointment.PetId}, Date: {appointment.AppointmentDate}");
+
+                    // Check if the pet associated with this appointment exists
+                    var petExists = context.Pets.Any(p => p.PetId == appointment.PetId);
+                    if (!petExists)
                     {
+                        Console.WriteLine($"Skipping appointment {appointment.AppointmentId} as PetId {appointment.PetId} does not exist in DB.");
+                        continue;
+                    }
+
+                    var existingAppointment = context.Appointments.FirstOrDefault(a => a.AppointmentId == appointment.AppointmentId);
+
+                    if (existingAppointment == null)
+                    {
+                        // If appointment doesn't exist, add it
                         context.Appointments.Add(appointment);
+                        Console.WriteLine("Adding new appointment.");
+                    }
+                    else
+                    {
+                        // If appointment exists, update the relevant fields (e.g., status)
+                        existingAppointment.AppointmentDate = appointment.AppointmentDate;
+                        existingAppointment.Type = appointment.Type;
+                        existingAppointment.Status = appointment.Status;
+
+                        Console.WriteLine("Updating existing appointment.");
                     }
                 }
 
                 context.SaveChanges();
+                Console.WriteLine("Appointments successfully saved to the database.");
             }
         }
+
 
         public static bool DeleteOwnerAndPetsFromDatabase(int ownerId, PetCareContext context)
         {
