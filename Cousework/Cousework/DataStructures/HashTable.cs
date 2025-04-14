@@ -224,5 +224,26 @@ namespace Cousework.DataStructures
             return false;
         }
 
+        public T SearchByKey(int key)
+        {
+            for (int i = 0; i < _capacity; i++)
+            {
+                if (_buckets[i] != null)
+                {
+                    var item = _buckets[i];
+                    var idProperty = item.GetType().GetProperty("AppointmentId")
+                                     ?? item.GetType().GetProperty("PetId")
+                                     ?? item.GetType().GetProperty("OwnerId");
+
+                    if (idProperty != null && (int)idProperty.GetValue(item) == key)
+                    {
+                        return item;
+                    }
+                }
+            }
+
+            return default;
+        }
+
     }
 }

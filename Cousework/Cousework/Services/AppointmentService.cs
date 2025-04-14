@@ -100,10 +100,40 @@ namespace Cousework.Services
 
             // Display the matching appointments
             Console.WriteLine("\nMatching Appointments:");
-            foreach (var appointment in matchingAppointments)
+            foreach (var appointment in _appointmentTable.GetAllElements())
             {
-                Console.WriteLine($"Appointment ID: {appointment.AppointmentId}, Pet ID: {appointment.PetId}, Date: {appointment.AppointmentDate.ToShortDateString()}, Status: {appointment.Status}");
+                string petName = "Unknown Pet";
+                string ownerName = "Unknown Owner";
+
+                // Check if PetId is not null before using .Value
+                if (appointment?.PetId != null)
+                {
+                    var petHashTable = petService.GetPetHashTable();
+                    var pet = petHashTable.SearchByKey(appointment.PetId.Value);
+
+                    if (pet != null)
+                    {
+                        petName = pet.Name ?? "Unknown Pet";
+
+                        // Check if OwnerId is not null before using .Value
+                        if (pet.OwnerId != null)
+                        {
+                            var ownerHashTable = ownerService.GetOwnerHashTable();
+                            var owner = ownerHashTable.SearchByKey(pet.OwnerId.Value);
+
+                            if (owner != null)
+                            {
+                                ownerName = owner.Name ?? "Unknown Owner";
+                            }
+                        }
+                    }
+                }
+
+                Console.WriteLine($"Appointment ID: {appointment.AppointmentId}, Pet: {petName}, Owner: {ownerName}, Date: {appointment.AppointmentDate.ToShortDateString()}, Status: {appointment.Status}");
             }
+
+
+
 
             // Let the user select the appointment based on index
             Console.Write("\nEnter the Appointment ID from the above list: ");
