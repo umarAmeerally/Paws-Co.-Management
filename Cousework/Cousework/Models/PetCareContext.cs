@@ -25,7 +25,7 @@ public partial class PetCareContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 
-        => optionsBuilder.UseSqlServer("Data Source=HP;Initial Catalog=Cousework;Integrated Security=True;Trust Server Certificate=True");
+        => optionsBuilder.UseSqlServer ("Data Source=MEHTAAB\\MSSQLSERVER02;Initial Catalog=PetManagementdb;Integrated Security=True;TrustServerCertificate=True");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

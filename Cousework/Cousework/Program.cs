@@ -15,6 +15,8 @@ namespace Cousework
             HashTable<Owner> ownerTable;
             HashTable<Pet> petTable;
 
+            DisplayHeader("Welcome to the Pet Management System");
+
             Console.WriteLine("Choose data source:");
             Console.WriteLine("1. Load data from CSV");
             Console.WriteLine("2. Load data from Database");
@@ -23,23 +25,21 @@ namespace Cousework
 
             if (input == "1")
             {
-                string csvPath = "C:\\Users\\thera\\Desktop\\dummy_pets_data.csv";
+                string csvPath = @"C:\path\to\your\owners.csv"; // Update with actual file path
                 var csvReader = new CSVReader();
                 csvReader.ParseCSV(csvPath);
-
                 ownerTable = csvReader.OwnerHashTable;
                 petTable = csvReader.PetHashTable;
 
-                Console.WriteLine("\nCSV parsed and data loaded into HashTables.");
+                DisplayMessage("\nCSV parsed and data loaded into HashTables.");
+                string connectionString = @"Data Source=ServerName;Initial Catalog=Pet Management;Integrated Security=True;";
+                DatabaseHelper.SaveOwnersToDatabase(ownerTable, connectionString);
             }
             else
             {
                 Console.WriteLine("\nLoading data from database...");
-
-                // ✅ Use the new combined method
                 (ownerTable, petTable) = DatabaseLoader.LoadData(context);
-
-                Console.WriteLine("Data loaded from database into HashTables.");
+                DisplayMessage("Data loaded from database into HashTables.");
             }
 
             var ownerService = new OwnerService(ownerTable);
@@ -48,25 +48,37 @@ namespace Cousework
             RunMenu(ownerService, petService, context);
         }
 
+        static void DisplayHeader(string header)
+        {
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("\n----- " + header + " -----");
+            Console.ResetColor();
+        }
+
+        static void DisplayMessage(string message)
+        {
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine(message);
+            Console.ResetColor();
+        }
 
         static void RunMenu(OwnerService ownerService, PetService petService, PetCareContext context)
         {
             while (true)
             {
-                Console.WriteLine("\n----- Pet Management System -----");
+                DisplayHeader("Pet Management System");
                 Console.WriteLine("1. Display all owners");
                 Console.WriteLine("2. Add new owner");
                 Console.WriteLine("3. Update owner");
                 Console.WriteLine("4. Delete owner");
                 Console.WriteLine("5. Display all pets");
                 Console.WriteLine("6. Add new pet");
-                Console.WriteLine("7. Update a  pet");
+                Console.WriteLine("7. Update a pet");
                 Console.WriteLine("8. Exit");
                 Console.WriteLine("9. Save all data to database");
                 Console.Write("Choose an option: ");
 
                 string choice = Console.ReadLine();
-
                 switch (choice)
                 {
                     case "1":
@@ -79,83 +91,103 @@ namespace Cousework
                         break;
 
                     case "3":
-                        Console.Write("Enter Owner ID to update: ");
-                        int updateId = int.Parse(Console.ReadLine());
-                        var updatedOwner = CreateOwnerFromInput(ownerService, context, updateId);
-                        ownerService.UpdateOwner(updateId, updatedOwner);
+                        UpdateOwner(ownerService, context);
                         break;
 
                     case "4":
-                        Console.Write("Enter Owner ID to delete: ");
-                        if (int.TryParse(Console.ReadLine(), out int deleteId))
-                        {
-                            var confirmed = DatabaseHelper.DeleteOwnerAndPetsFromDatabase(deleteId, context);
-
-                            if (confirmed)
-                            {
-                                // Only remove from hash tables if DB deletion is successful
-                                ownerService.DeleteOwner(deleteId);
-                                petService.DeletePetsByOwnerId(deleteId); // You may need to implement this method
-                                Console.WriteLine("Owner and their pets deleted from hash tables.");
-                            }
-                        }
-                        else
-                        {
-                            Console.WriteLine("Invalid ID.");
-                        }
+                        DeleteOwner(ownerService, petService, context);
                         break;
-
 
                     case "5":
                         petService.DisplayPets();
                         break;
 
                     case "6":
-                        var newPet = CreatePetFromInput(ownerService , petService , context); // Pass ownerService!
+                        var newPet = CreatePetFromInput(ownerService, petService, context);
                         if (newPet != null)
                             petService.AddPet(newPet);
                         break;
 
                     case "7":
-                        Console.Write("Enter Pet ID to update: ");
-                        if (int.TryParse(Console.ReadLine(), out int petIdToUpdate))
-                        {
-                            var updatedPet = CreateUpdatedPetFromInput(petService, petIdToUpdate);
-                            if (updatedPet != null)
-                            {
-                                petService.UpdatePet(petIdToUpdate, updatedPet);
-                            }
-                        }
-                        else
-                        {
-                            Console.WriteLine("Invalid Pet ID.");
-                        }
+                        UpdatePet(petService);
                         break;
-
 
                     case "8":
                         Console.WriteLine("Exiting...");
                         return;
 
                     case "9":
-                        Console.WriteLine("Saving owners and pets to the database...");
-
-                        string connectionString = "Data Source=HP;Initial Catalog=Cousework;Integrated Security=True;Trust Server Certificate=True";
-
-                        var ownerHashTable = ownerService.GetOwnerHashTable();
-                        var petHashTable = petService.GetPetHashTable();
-
-                        DatabaseHelper.SaveOwnersToDatabase(ownerHashTable, connectionString);
-                        DatabaseHelper.SavePetsToDatabase(petHashTable, connectionString);
-
-                        Console.WriteLine("All data saved successfully.");
+                        SaveDataToDatabase(ownerService, petService, context);
                         break;
 
                     default:
-                        Console.WriteLine("Invalid option.");
+                        Console.WriteLine("Invalid option. Please try again.");
                         break;
                 }
             }
+        }
+
+        static void UpdateOwner(OwnerService ownerService, PetCareContext context)
+        {
+            Console.Write("Enter Owner ID to update: ");
+            if (int.TryParse(Console.ReadLine(), out int updateId))
+            {
+                var updatedOwner = CreateOwnerFromInput(ownerService, context, updateId);
+                ownerService.UpdateOwner(updateId, updatedOwner);
+            }
+            else
+            {
+                Console.WriteLine("Invalid Owner ID.");
+            }
+        }
+
+        static void DeleteOwner(OwnerService ownerService, PetService petService, PetCareContext context)
+        {
+            Console.Write("Enter Owner ID to delete: ");
+            if (int.TryParse(Console.ReadLine(), out int deleteId))
+            {
+                var confirmed = DatabaseHelper.DeleteOwnerAndPetsFromDatabase(deleteId, context);
+                if (confirmed)
+                {
+                    ownerService.DeleteOwner(deleteId);
+                    petService.DeletePetsByOwnerId(deleteId);
+                    DisplayMessage("Owner and their pets deleted from hash tables.");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Invalid Owner ID.");
+            }
+        }
+
+        static void UpdatePet(PetService petService)
+        {
+            Console.Write("Enter Pet ID to update: ");
+            if (int.TryParse(Console.ReadLine(), out int petIdToUpdate))
+            {
+                var updatedPet = CreateUpdatedPetFromInput(petService, petIdToUpdate);
+                if (updatedPet != null)
+                {
+                    petService.UpdatePet(petIdToUpdate, updatedPet);
+                }
+            }
+            else
+            {
+                Console.WriteLine("Invalid Pet ID.");
+            }
+        }
+
+        static void SaveDataToDatabase(OwnerService ownerService, PetService petService, PetCareContext context)
+        {
+            Console.WriteLine("Saving data to the database...");
+            string connectionString = "Data Source=ServerName;Initial Catalog=Pet Management;Integrated Security=True;";
+            var ownerHashTable = ownerService.GetOwnerHashTable();
+            var petHashTable = petService.GetPetHashTable();
+
+            DatabaseHelper.SaveOwnersToDatabase(ownerHashTable, connectionString);
+            DatabaseHelper.SavePetsToDatabase(petHashTable, connectionString);
+
+            DisplayMessage("All data saved successfully.");
         }
 
         static Owner CreateOwnerFromInput(OwnerService ownerService, PetCareContext context, int? idOverride = null)
