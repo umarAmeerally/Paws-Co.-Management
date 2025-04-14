@@ -14,6 +14,8 @@ namespace Cousework
             var context = new PetCareContext(); // EF DB context
             HashTable<Owner> ownerTable;
             HashTable<Pet> petTable;
+            HashTable<Appointment> appointmentTable;
+
 
             Console.WriteLine("Choose data source:");
             Console.WriteLine("1. Load data from CSV");
@@ -29,27 +31,34 @@ namespace Cousework
 
                 ownerTable = csvReader.OwnerHashTable;
                 petTable = csvReader.PetHashTable;
+                appointmentTable = csvReader.AppointmentHashTable;
 
                 Console.WriteLine("\nCSV parsed and data loaded into HashTables.");
             }
             else
             {
                 Console.WriteLine("\nLoading data from database...");
-
+                    
                 // ✅ Use the new combined method
                 (ownerTable, petTable) = DatabaseLoader.LoadData(context);
+                appointmentTable = new HashTable<Appointment>(); // <- Add this line!
 
                 Console.WriteLine("Data loaded from database into HashTables.");
             }
 
             var ownerService = new OwnerService(ownerTable);
             var petService = new PetService(petTable, ownerTable);
+            var appointmentService = new AppointmentService(appointmentTable);
 
-            RunMenu(ownerService, petService, context);
+
+
+
+
+            RunMenu(ownerService, petService,appointmentService, context);
         }
 
 
-        static void RunMenu(OwnerService ownerService, PetService petService, PetCareContext context)
+        static void RunMenu(OwnerService ownerService, PetService petService, AppointmentService appointmentService, PetCareContext context)
         {
             while (true)
             {
@@ -63,6 +72,8 @@ namespace Cousework
                 Console.WriteLine("7. Update a  pet");
                 Console.WriteLine("8. Exit");
                 Console.WriteLine("9. Save all data to database");
+                Console.WriteLine("10. view appointments");
+
                 Console.Write("Choose an option: ");
 
                 string choice = Console.ReadLine();
@@ -149,6 +160,10 @@ namespace Cousework
                         DatabaseHelper.SavePetsToDatabase(petHashTable, connectionString);
 
                         Console.WriteLine("All data saved successfully.");
+                        break;
+
+                    case "10":
+                        appointmentService.DisplayAppointments();
                         break;
 
                     default:

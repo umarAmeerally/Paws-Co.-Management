@@ -39,4 +39,10 @@ public partial class Appointment
     [ForeignKey("PetId")]
     [InverseProperty("Appointments")]
     public virtual Pet? Pet { get; set; }
+
+    public override string ToString()
+    {
+        return $"AppointmentId: {AppointmentId}, Date: {AppointmentDate}, Type: {Type}, Status: {Status}, PetId: {PetId}";
+    }
+
 }

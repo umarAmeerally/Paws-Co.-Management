@@ -11,10 +11,15 @@ namespace Cousework.Utils
         public HashTable<Owner> OwnerHashTable { get; private set; }
         public HashTable<Pet> PetHashTable { get; private set; }
 
+        public HashTable<Appointment> AppointmentHashTable { get; private set; }
+
+
+
         public CSVReader()
         {
             OwnerHashTable = new HashTable<Owner>();
             PetHashTable = new HashTable<Pet>();
+            AppointmentHashTable = new HashTable<Appointment>();    
         }
 
         public void ParseCSV(string filePath)
@@ -38,8 +43,7 @@ namespace Cousework.Utils
                                 OwnerId = int.Parse(parts[0]),
                                 Name = parts[1],
                                 Email = parts[2],
-                                Phone = parts[3],
-                                Address = null
+                                Phone = parts[3]
                             };
 
                             OwnerHashTable.Insert(owner);
@@ -63,11 +67,33 @@ namespace Cousework.Utils
                                 Species = parts[6],
                                 Breed = parts[7],
                                 Age = int.TryParse(parts[8], out int age) ? age : null,
-                                OwnerId = int.Parse(parts[0]) // Link to owner
+                                OwnerId = int.Parse(parts[0]) 
                             };
 
                             PetHashTable.Insert(pet);
                             Console.WriteLine($"Pet {pet.Name} added to hash table.");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Error processing pet from line: {line}. Exception: {ex.Message}");
+                        }
+                    }
+
+                    if (parts.Length >= 9)
+                    {
+                        try
+                        {
+                            var appointment = new Appointment
+                            {
+                                AppointmentId = int.Parse(parts[9]),
+                                PetId = int.Parse(parts[4]),
+                                AppointmentDate = DateTime.Parse(parts[10]),
+                                Type = parts[11],
+                                Status = parts[12]
+                            };
+
+                            AppointmentHashTable.Insert(appointment);
+                            Console.WriteLine($"Appointment {appointment.AppointmentId} added to hash table.");
                         }
                         catch (Exception ex)
                         {
@@ -84,12 +110,8 @@ namespace Cousework.Utils
             }
         }
 
-        public void DisplayHashTable()
-        {
-            Console.WriteLine("Displaying owners from HashTable:");
-            OwnerHashTable.DisplayContents();
-        }
 
-        
+
+
     }
 }
