@@ -25,7 +25,7 @@ namespace Cousework
 
             if (input == "1")
             {
-                string csvPath = "C:\\Users\\thera\\Desktop\\dummy_pets_data.csv";
+                string csvPath = "C:\\Users\\thera\\Desktop\\pet_management_data.csv";
                 var csvReader = new CSVReader();
                 csvReader.ParseCSV(csvPath);
 
@@ -149,18 +149,21 @@ namespace Cousework
                         return;
 
                     case "9":
-                        Console.WriteLine("Saving owners and pets to the database...");
+                        Console.WriteLine("Saving owners, pets, and appointments to the database...");
 
                         string connectionString = "Data Source=HP;Initial Catalog=Cousework;Integrated Security=True;Trust Server Certificate=True";
 
                         var ownerHashTable = ownerService.GetOwnerHashTable();
                         var petHashTable = petService.GetPetHashTable();
+                        var appointmentHashTable = appointmentService.GetAppointmentHashTable(); 
 
                         DatabaseHelper.SaveOwnersToDatabase(ownerHashTable, connectionString);
                         DatabaseHelper.SavePetsToDatabase(petHashTable, connectionString);
+                        DatabaseHelper.SaveAppointmentsToDatabase(appointmentHashTable, connectionString); 
 
                         Console.WriteLine("All data saved successfully.");
                         break;
+
 
                     case "10":
                         appointmentService.DisplayAppointments();

@@ -40,7 +40,7 @@ public partial class Owner
 
     public override string ToString()
     {
-        return $"OwnerId: {OwnerId}, Name: {Name}, Email: {Email}, Phone: {Phone}";
+        return $"OwnerId: {OwnerId}, Name: {Name}, Email: {Email}, Phone: {Phone}, Address: {Address}";
     }
 }
 

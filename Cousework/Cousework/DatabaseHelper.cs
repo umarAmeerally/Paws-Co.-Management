@@ -31,7 +31,6 @@ namespace Cousework
                         existingOwner.Name = owner.Name;
                         existingOwner.Email = owner.Email;
                         existingOwner.Phone = owner.Phone;
-                        existingOwner.Address = owner.Address;
                         Console.WriteLine("Updating existing owner.");
                     }
                 }
@@ -80,6 +79,26 @@ namespace Cousework
 
                 context.SaveChanges();
                 Console.WriteLine("Pets successfully saved to the database.");
+            }
+        }
+
+        public static void SaveAppointmentsToDatabase(HashTable<Appointment> appointmentTable, string connectionString)
+        {
+            using (var context = new PetCareContext())
+            {
+                var appointments = appointmentTable.GetAllElements();
+
+                foreach (var appointment in appointments)
+                {
+                    // Only add if not already in DB (based on unique AppointmentId)
+                    bool exists = context.Appointments.Any(a => a.AppointmentId == appointment.AppointmentId);
+                    if (!exists)
+                    {
+                        context.Appointments.Add(appointment);
+                    }
+                }
+
+                context.SaveChanges();
             }
         }
 

@@ -45,7 +45,7 @@ namespace Cousework.Services
                     pet.Name = updatedPet.Name;
                     pet.Species = updatedPet.Species;
                     pet.Breed = updatedPet.Breed;
-                    pet.Age = updatedPet.Age;
+                    pet.Age = updatedPet.Age; 
                     pet.Gender = updatedPet.Gender;
                     pet.MedicalHistory = updatedPet.MedicalHistory;
                     Console.WriteLine($"Pet with ID {petId} updated successfully.");
