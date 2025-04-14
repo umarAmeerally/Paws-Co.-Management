@@ -25,14 +25,14 @@ namespace Cousework
 
             if (input == "1")
             {
-                string csvPath = @"C:\path\to\your\owners.csv"; // Update with actual file path
+                string csvPath = @"C:\Users\mehtaab\OneDrive\Desktop\CST 2550\owners.csv"; // Update with actual file path
                 var csvReader = new CSVReader();
                 csvReader.ParseCSV(csvPath);
                 ownerTable = csvReader.OwnerHashTable;
                 petTable = csvReader.PetHashTable;
 
                 DisplayMessage("\nCSV parsed and data loaded into HashTables.");
-                string connectionString = @"Data Source=ServerName;Initial Catalog=Pet Management;Integrated Security=True;";
+                string connectionString = @"Data Source=MEHTAAB\\MSSQLSERVER02;Initial Catalog=PetManagementdb;Integrated Security=True;TrustServerCertificate=True";
                 DatabaseHelper.SaveOwnersToDatabase(ownerTable, connectionString);
             }
             else
@@ -51,14 +51,16 @@ namespace Cousework
         static void DisplayHeader(string header)
         {
             Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("\n----- " + header + " -----");
+            Console.WriteLine("\n===========================================");
+            Console.WriteLine($"* {header} *");
+            Console.WriteLine("===========================================");
             Console.ResetColor();
         }
 
         static void DisplayMessage(string message)
         {
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine(message);
+            Console.WriteLine($"[INFO] {message}");
             Console.ResetColor();
         }
 
@@ -180,7 +182,7 @@ namespace Cousework
         static void SaveDataToDatabase(OwnerService ownerService, PetService petService, PetCareContext context)
         {
             Console.WriteLine("Saving data to the database...");
-            string connectionString = "Data Source=ServerName;Initial Catalog=Pet Management;Integrated Security=True;";
+            string connectionString = "Data Source=MEHTAAB\\MSSQLSERVER02;Initial Catalog=PetManagementdb;Integrated Security=True;TrustServerCertificate=True";
             var ownerHashTable = ownerService.GetOwnerHashTable();
             var petHashTable = petService.GetPetHashTable();
 
@@ -216,7 +218,7 @@ namespace Cousework
             };
         }
 
-        static Pet CreatePetFromInput(OwnerService ownerService , PetService petService , PetCareContext context , int? existingPetId = null) 
+        static Pet CreatePetFromInput(OwnerService ownerService, PetService petService, PetCareContext context, int? existingPetId = null)
         {
             Console.Write("Enter Pet Name: ");
             string name = Console.ReadLine();
@@ -299,7 +301,6 @@ namespace Cousework
             string ageInput = Console.ReadLine();
             int age = string.IsNullOrWhiteSpace(ageInput) ? existingPet.Age ?? 0 : int.Parse(ageInput);
 
-
             Console.Write($"Enter Gender ({existingPet.Gender}): ");
             string gender = Console.ReadLine();
             gender = string.IsNullOrWhiteSpace(gender) ? existingPet.Gender : gender;
@@ -320,6 +321,6 @@ namespace Cousework
                 MedicalHistory = history
             };
         }
-
     }
 }
+
