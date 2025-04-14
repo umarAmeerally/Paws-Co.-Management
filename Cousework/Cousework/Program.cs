@@ -40,8 +40,7 @@ namespace Cousework
                 Console.WriteLine("\nLoading data from database...");
                     
                 // ✅ Use the new combined method
-                (ownerTable, petTable) = DatabaseLoader.LoadData(context);
-                appointmentTable = new HashTable<Appointment>(); // <- Add this line!
+                (ownerTable, petTable ,appointmentTable) = DatabaseLoader.LoadData(context);
 
                 Console.WriteLine("Data loaded from database into HashTables.");
             }
@@ -202,7 +201,7 @@ namespace Cousework
             };
         }
 
-        static Pet CreatePetFromInput(OwnerService ownerService , PetService petService , PetCareContext context , int? existingPetId = null) 
+        static Pet CreatePetFromInput(OwnerService ownerService, PetService petService, PetCareContext context, int? existingPetId = null)
         {
             Console.Write("Enter Pet Name: ");
             string name = Console.ReadLine();
@@ -215,6 +214,15 @@ namespace Cousework
 
             Console.Write("Enter Age: ");
             int.TryParse(Console.ReadLine(), out int age);
+
+            Console.Write("Enter Gender (Male/Female): ");
+            string gender = Console.ReadLine();
+
+            Console.Write("Enter Medical History: ");
+            string medicalHistory = Console.ReadLine();
+
+            Console.Write("Enter Date Registered (dd/MM/yyyy): ");
+            DateTime.TryParseExact(Console.ReadLine(), "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out DateTime dateRegistered);
 
             // --- Owner selection helper ---
             Console.Write("Enter part of the owner's name or email: ");
@@ -243,18 +251,20 @@ namespace Cousework
             int.TryParse(Console.ReadLine(), out int ownerId);
 
             // --- Create and return Pet object ---
-
             return new Pet
             {
                 PetId = petService.GenerateTrulyUniquePetId(context),
-
                 Name = name,
                 Species = species,
                 Breed = breed,
                 Age = age,
+                Gender = gender,
+                MedicalHistory = medicalHistory,
+                DateRegistered = dateRegistered,
                 OwnerId = ownerId
             };
         }
+
 
         static Pet CreateUpdatedPetFromInput(PetService petService, int petId)
         {
