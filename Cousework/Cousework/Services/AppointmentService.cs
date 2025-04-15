@@ -1,5 +1,6 @@
 ﻿using Cousework.DataStructures;
 using Cousework.Models;
+using Spectre.Console;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,43 +18,71 @@ namespace Cousework.Services
 
         public void AddAppointment(PetService petService, OwnerService ownerService)
         {
+            AnsiConsole.MarkupLine("\n[bold dodgerblue1]📅 Add New Appointment[/]");
+
             var selectedPet = PromptForPetByOwner(ownerService, petService);
 
             if (selectedPet == null)
             {
-                Console.WriteLine("No pet selected. Cannot add appointment.");
+                AnsiConsole.MarkupLine("[red]No pet selected. Cannot add appointment.[/]");
                 return;
             }
+            int day = AnsiConsole.Prompt(
+                new TextPrompt<int>("Enter [green]day[/] [[1-31]]:")
+                .Validate(d =>
+                {
+                    return d is >= 1 and <= 31
+                        ? ValidationResult.Success()
+                        : ValidationResult.Error("[red]Day must be between 1 and 31[/]");
+                }));
 
-            Console.Write("Enter Appointment Date (yyyy-MM-dd): ");
-            if (!DateTime.TryParse(Console.ReadLine(), out DateTime appointmentDate))
+                int month = AnsiConsole.Prompt(
+                new TextPrompt<int>("Enter [green]month[/] [[1-12]]:")
+                    .Validate(m =>
+                    {
+                        return m is >= 1 and <= 12
+                            ? ValidationResult.Success()
+                            : ValidationResult.Error("[red]Month must be between 1 and 12[/]");
+                    }));
+
+                int year = AnsiConsole.Prompt(
+                new TextPrompt<int>("Enter [green]year[/] [[e.g. 2025]]:")
+                    .Validate(y =>
+                    {
+                        return y >= 2000 && y <= 2100
+                            ? ValidationResult.Success()
+                            : ValidationResult.Error("[red]Year must be between 2000 and 2100[/]");
+                    }));
+
+            DateTime appointmentDate;
+
+            // ✅ Construct the date safely and catch only this point
+            try
             {
-                Console.WriteLine("Invalid date format.");
-                return;
+                appointmentDate = new DateTime(year, month, day);
             }
-
-            string[] validTypes = { "Check-up", "Vaccination", "Grooming", "Surgery" };
-            string[] validStatuses = { "Scheduled", "Completed", "Cancelled" };
-
-            Console.Write("Enter Appointment Type (Check-up, Vaccination, Grooming, Surgery): ");
-            string type = Console.ReadLine();
-            if (!validTypes.Contains(type))
+            catch
             {
-                Console.WriteLine("Invalid type entered.");
-                return;
+                AnsiConsole.MarkupLine("[red]❌ Invalid date combination (e.g., Feb 30). Please try again.[/]");
+                return; // or loop back if you want to retry
             }
 
-            Console.Write("Enter Appointment Status (Scheduled, Completed, Cancelled): ");
-            string status = Console.ReadLine();
-            if (!validStatuses.Contains(status))
-            {
-                Console.WriteLine("Invalid status entered.");
-                return;
-            }
 
-            // Generate unique ID
-            int newAppointmentId = _appointmentTable.GetAllElements().Count() > 0
 
+            // Select Appointment Type
+            string type = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[green]Select Appointment Type[/]:")
+                    .AddChoices("Check-up", "Vaccination", "Grooming", "Surgery"));
+
+            // Select Appointment Status
+            string status = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("[green]Select Appointment Status[/]:")
+                    .AddChoices("Scheduled", "Completed", "Cancelled"));
+
+            // Generate unique appointment ID
+            int newAppointmentId = _appointmentTable.GetAllElements().Any()
                 ? _appointmentTable.GetAllElements().Max(a => a.AppointmentId) + 1
                 : 1;
 
@@ -67,19 +96,19 @@ namespace Cousework.Services
                 OwnerId = selectedPet.OwnerId
             };
 
-            // ✅ Insert into the hash table
-            _appointmentTable.Insert( newAppointment);
+            // Insert into hash table
+            _appointmentTable.Insert(newAppointment);
 
-            Console.WriteLine("Appointment added successfully.");
+            AnsiConsole.MarkupLine("[green]✔ Appointment added successfully![/]");
         }
+
 
         public bool UpdateAppointmentStatus(PetService petService, OwnerService ownerService)
         {
             // Prompt for the owner's name or pet's name to find matching appointments
-            Console.Write("Enter part of the owner's name or pet's name: ");
-            string search = Console.ReadLine();
+            var search = AnsiConsole.Ask<string>("Enter part of the [green]owner's[/] or [green]pet's[/] name:");
 
-            // Find matching owners or pets
+            // Find matching appointments
             var matchingAppointments = _appointmentTable
                 .GetAllElements()
                 .Where(a => petService
@@ -89,83 +118,63 @@ namespace Cousework.Services
                             ownerService
                             .GetOwnerHashTable()
                             .GetAllElements()
-                            .Any(o => o.Name.Contains(search, StringComparison.OrdinalIgnoreCase) && o.OwnerId == a.PetId))
+                            .Any(o => o.Name.Contains(search, StringComparison.OrdinalIgnoreCase) && o.OwnerId == a.OwnerId))
                 .ToList();
 
             if (matchingAppointments.Count == 0)
             {
-                Console.WriteLine("No matching appointments found.");
+                AnsiConsole.MarkupLine("[red]❌ No matching appointments found.[/]");
                 return false;
             }
 
             // Display the matching appointments
-            Console.WriteLine("\nMatching Appointments:");
-            foreach (var appointment in _appointmentTable.GetAllElements())
+            AnsiConsole.MarkupLine("\n[blue]Matching Appointments:[/]");
+            foreach (var appointment in matchingAppointments)
             {
                 string petName = "Unknown Pet";
                 string ownerName = "Unknown Owner";
 
-                // Check if PetId is not null before using .Value
                 if (appointment?.PetId != null)
                 {
-                    var petHashTable = petService.GetPetHashTable();
-                    var pet = petHashTable.SearchByKey(appointment.PetId.Value);
-
+                    var pet = petService.GetPetHashTable().SearchByKey(appointment.PetId.Value);
                     if (pet != null)
                     {
                         petName = pet.Name ?? "Unknown Pet";
 
-                        // Check if OwnerId is not null before using .Value
                         if (pet.OwnerId != null)
                         {
-                            var ownerHashTable = ownerService.GetOwnerHashTable();
-                            var owner = ownerHashTable.SearchByKey(pet.OwnerId.Value);
-
+                            var owner = ownerService.GetOwnerHashTable().SearchByKey(pet.OwnerId.Value);
                             if (owner != null)
-                            {
                                 ownerName = owner.Name ?? "Unknown Owner";
-                            }
                         }
                     }
                 }
 
-                Console.WriteLine($"Appointment ID: {appointment.AppointmentId}, Pet: {petName}, Owner: {ownerName}, Date: {appointment.AppointmentDate.ToShortDateString()}, Status: {appointment.Status}");
+                AnsiConsole.MarkupLine($"[bold yellow]ID:[/] {appointment.AppointmentId} | [green]Pet:[/] {petName} | [blue]Owner:[/] {ownerName} | [cyan]Date:[/] {appointment.AppointmentDate:dd/MM/yyyy} | [purple]Status:[/] {appointment.Status}");
             }
 
+            int appointmentId = AnsiConsole.Ask<int>("\nEnter the [green]Appointment ID[/] from the list:");
 
-
-
-            // Let the user select the appointment based on index
-            Console.Write("\nEnter the Appointment ID from the above list: ");
-            if (int.TryParse(Console.ReadLine(), out int appointmentId))
+            var appointmentToUpdate = matchingAppointments.FirstOrDefault(a => a.AppointmentId == appointmentId);
+            if (appointmentToUpdate == null)
             {
-                var appointmentToUpdate = matchingAppointments.FirstOrDefault(a => a.AppointmentId == appointmentId);
-
-                if (appointmentToUpdate != null)
-                {
-                    // Valid status options
-                    string[] validStatuses = { "Scheduled", "Completed", "Cancelled" };
-
-                    // Prompt the user for the new status
-                    Console.Write("Enter new Appointment Status (Scheduled, Completed, Cancelled): ");
-                    string status = Console.ReadLine();
-
-                    // Validate the status input
-                    if (!validStatuses.Contains(status))
-                    {
-                        Console.WriteLine("Invalid status entered.");
-                        return false;
-                    }
-
-                    // Update only the status
-                    appointmentToUpdate.Status = status;
-                    Console.WriteLine("Appointment status updated successfully.");
-                    return true;
-                }
+                AnsiConsole.MarkupLine("[red]❌ Appointment not found.[/]");
+                return false;
             }
 
-            return false;
+            // Status options
+            var newStatus = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("Select the [green]new status[/]:")
+                    .AddChoices("Scheduled", "Completed", "Cancelled")
+            );
+
+            // Update and confirm
+            appointmentToUpdate.Status = newStatus;
+            AnsiConsole.MarkupLine("[green]✅ Appointment status updated successfully.[/]");
+            return true;
         }
+
 
 
         public void DisplayAppointments()
@@ -179,24 +188,7 @@ namespace Cousework.Services
             return _appointmentTable.DeleteByKey(appointmentId);
         }
 
-        public bool UpdateAppointment(int appointmentId, Appointment updatedAppointment)
-        {
-            foreach (var appointment in _appointmentTable.GetAllElements())
-            {
-                if (appointment.AppointmentId == appointmentId)
-                {
-                    appointment.PetId = updatedAppointment.PetId;
-                    appointment.AppointmentDate = updatedAppointment.AppointmentDate;
-                    appointment.Type = updatedAppointment.Type;
-                    appointment.Status = updatedAppointment.Status;
-                    Console.WriteLine("Appointment updated successfully.");
-                    return true;
-                }
-            }
-
-            Console.WriteLine("Appointment not found.");
-            return false;
-        }
+     
 
         public void DeleteAppointmentsByPetId(int petId)
         {
@@ -216,11 +208,10 @@ namespace Cousework.Services
 
         public static Pet PromptForPetByOwner(OwnerService ownerService, PetService petService)
         {
-            // Prompt user for the owner's name or email
-            Console.Write("Enter part of the owner's name or email: ");
-            string search = Console.ReadLine();
+            AnsiConsole.MarkupLine("\n[bold yellow]🔍 Find Pet by Owner[/]");
 
-            // Find matching owners
+            string search = AnsiConsole.Ask<string>("Enter part of the owner's [green]name[/] or [green]email[/]:");
+
             var matchingOwners = ownerService
                 .GetOwnerHashTable()
                 .GetAllElements()
@@ -230,52 +221,39 @@ namespace Cousework.Services
 
             if (matchingOwners.Count == 0)
             {
-                Console.WriteLine("No matching owners found.");
+                AnsiConsole.MarkupLine("[red]❌ No matching owners found.[/]");
                 return null;
             }
 
-            // Display matching owners
-            Console.WriteLine("\nMatching Owners:");
-            foreach (var owner in matchingOwners)
+            // Let the user select from matching owners
+            var selectedOwner = AnsiConsole.Prompt(
+                new SelectionPrompt<Owner>()
+                    .Title("Select an [blue]owner[/]:")
+                    .UseConverter(o => $"ID: {o.OwnerId} | {o.Name} ({o.Email})")
+                    .AddChoices(matchingOwners));
+
+            var petsOwnedByOwner = petService
+                .GetPetHashTable()
+                .GetAllElements()
+                .Where(p => p.OwnerId == selectedOwner.OwnerId)
+                .ToList();
+
+            if (petsOwnedByOwner.Count == 0)
             {
-                Console.WriteLine($"ID: {owner.OwnerId}, Name: {owner.Name}, Email: {owner.Email}");
+                AnsiConsole.MarkupLine("[red]⚠️ This owner does not have any pets.[/]");
+                return null;
             }
 
-            // Let the user select the owner from the matching list
-            Console.Write("\nEnter the Owner ID from the above list: ");
-            if (int.TryParse(Console.ReadLine(), out int ownerId))
-            {
-                // Find all pets for this owner
-                var petsOwnedByOwner = petService
-                    .GetPetHashTable()
-                    .GetAllElements()
-                    .Where(p => p.OwnerId == ownerId)
-                    .ToList();
+            // Let user pick one of their pets
+            var selectedPet = AnsiConsole.Prompt(
+                new SelectionPrompt<Pet>()
+                    .Title("Select a [blue]pet[/]:")
+                    .UseConverter(p => $"ID: {p.PetId} | {p.Name} ({p.Breed})")
+                    .AddChoices(petsOwnedByOwner));
 
-                if (petsOwnedByOwner.Count == 0)
-                {
-                    Console.WriteLine("This owner does not have any pets.");
-                    return null;
-                }
-
-                // Display pets for the selected owner
-                Console.WriteLine("\nMatching Pets:");
-                foreach (var pet in petsOwnedByOwner)
-                {
-                    Console.WriteLine($"Pet ID: {pet.PetId}, Name: {pet.Name}, Breed: {pet.Breed}");
-                }
-
-                // Let the user select the pet
-                Console.Write("\nEnter the Pet ID to update: ");
-                if (int.TryParse(Console.ReadLine(), out int petId))
-                {
-                    var petToUpdate = petsOwnedByOwner.FirstOrDefault(p => p.PetId == petId);
-                    return petToUpdate;
-                }
-            }
-
-            return null;
+            return selectedPet;
         }
+
     }
 
 
