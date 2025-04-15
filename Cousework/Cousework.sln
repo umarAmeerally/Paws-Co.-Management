@@ -5,6 +5,8 @@ VisualStudioVersion = 17.13.35931.197
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cousework", "Cousework\Cousework.csproj", "{CDD40E4A-5340-42A8-AE19-C849A743956C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestProject1", "TestProject1\TestProject1.csproj", "{EE06599B-B5E9-493D-BB30-9CC1EC24D7AB}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{CDD40E4A-5340-42A8-AE19-C849A743956C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CDD40E4A-5340-42A8-AE19-C849A743956C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CDD40E4A-5340-42A8-AE19-C849A743956C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EE06599B-B5E9-493D-BB30-9CC1EC24D7AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EE06599B-B5E9-493D-BB30-9CC1EC24D7AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EE06599B-B5E9-493D-BB30-9CC1EC24D7AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EE06599B-B5E9-493D-BB30-9CC1EC24D7AB}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
