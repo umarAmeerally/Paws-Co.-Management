@@ -2,299 +2,129 @@
 using Cousework.Models;
 using Cousework.Services;
 using Cousework.Utils;
+using Spectre.Console;
 using System;
-using System.Linq;
+using System.Runtime.CompilerServices;
 
-namespace Cousework
+namespace Cousework;
+
+enum DataSource { Csv, Database }
+record MenuItem(string Label, DataSource Value);
+
+class Program
 {
-    class Program
+    static void Main()
     {
-        static void Main(string[] args)
+        Console.OutputEncoding = System.Text.Encoding.UTF8;   // emoji & UTF‑8
+        Console.Title = "🐾  Pet Management System";
+
+        AnsiConsole.Write(
+            new FigletText("Pet Care")
+                .Centered()
+                .Color(Spectre.Console.Color.SpringGreen3));
+
+        // ─── choose data source ───────────────────────────────────────────
+        var srcChoice = AnsiConsole.Prompt(
+            new SelectionPrompt<MenuItem>()
+                .Title("Choose [green]data source[/]:")
+                .UseConverter(i => i.Label)
+                .AddChoices(
+                    new MenuItem("📄  Load data from CSV", DataSource.Csv),
+                    new MenuItem("🗄️  Load data from Database", DataSource.Database)));
+
+        var context = new PetCareContext();
+        HashTable<Owner> ownerTable = null!;
+        HashTable<Pet> petTable = null!;
+        HashTable<Appointment> apptTable = null!;
+
+        switch (srcChoice.Value)
         {
-            var context = new PetCareContext(); 
-            HashTable<Owner> ownerTable;
-            HashTable<Pet> petTable;
-            HashTable<Appointment> appointmentTable;
+            case DataSource.Csv:
+                string csvPath = AnsiConsole.Ask<string>(
+                    "CSV path?", "C:\\Users\\akash\\Downloads\\dummy_pets_data.csv");
 
+                AnsiConsole.Status().Spinner(Spinner.Known.Dots)
+                    .Start("Parsing CSV…", _ =>
+                    {
+                        var csv = new CSVReader();
+                        csv.ParseCSV(csvPath);
+                        ownerTable = csv.OwnerHashTable;
+                        petTable = csv.PetHashTable;
+                        apptTable = csv.AppointmentHashTable;
+                    });
 
-            Console.WriteLine("Choose data source:");
-            Console.WriteLine("1. Load data from CSV");
-            Console.WriteLine("2. Load data from Database");
-            Console.Write("Enter choice: ");
-            var input = Console.ReadLine();
+                AnsiConsole.MarkupLine("[green]✔ CSV loaded.[/]");
+                CliUi.ShowLoadSummary(ownerTable, petTable, apptTable, "CSV");
+                break;
 
-            if (input == "1")
-            {
-                string csvPath = "C:\\Users\\thera\\Desktop\\pet_management_data.csv";
-                var csvReader = new CSVReader();
-                csvReader.ParseCSV(csvPath);
+            case DataSource.Database:
+                AnsiConsole.Status().Spinner(Spinner.Known.Line)
+                    .Start("Loading DB…", _ =>
+                    {
+                        (ownerTable, petTable, apptTable) = DatabaseLoader.LoadData(context);
+                    });
 
-                ownerTable = csvReader.OwnerHashTable;
-                petTable = csvReader.PetHashTable;
-                appointmentTable = csvReader.AppointmentHashTable;
-
-                Console.WriteLine("\nCSV parsed and data loaded into HashTables.");
-            }
-            else
-            {
-                Console.WriteLine("\nLoading data from database...");
-               
-                (ownerTable, petTable ,appointmentTable) = DatabaseLoader.LoadData(context);
-
-                Console.WriteLine("Data loaded from database into HashTables.");
-            }
-
-            var ownerService = new OwnerService(ownerTable);
-            var petService = new PetService(context, petTable, ownerTable);
-            var appointmentService = new AppointmentService(appointmentTable);
-
-
-
-
-
-            RunMenu(ownerService, petService,appointmentService, context);
+                AnsiConsole.MarkupLine("[green]✔ Database loaded.[/]");
+                CliUi.ShowLoadSummary(ownerTable, petTable, apptTable, "Database");
+                break;
         }
 
+        var ownerSvc = new OwnerService(ownerTable);
+        var petSvc = new PetService(context, petTable, ownerTable);
+        var apptSvc = new AppointmentService(apptTable);
 
-        static void RunMenu(OwnerService ownerService, PetService petService, AppointmentService appointmentService, PetCareContext context)
+        RunMenu(ownerSvc, petSvc, apptSvc, context);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    static void RunMenu(
+        OwnerService owners,
+        PetService pets,
+        AppointmentService appts,
+        PetCareContext db)
+    {
+        while (true)
         {
-            while (true)
+            var choice = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title("\n[bold dodgerblue1]Main Menu[/]")
+                    .PageSize(14)
+                    .AddChoices(new[]
+                    {
+                        "👥  Display owners",
+                        "➕  Add owner",
+                        "✏️  Update owner",
+                        "🗑️  Delete owner",
+                        "🐶  Display pets",
+                        "➕  Add pet",
+                        "✏️  Update pet",
+                        "🗑️  Delete pet",
+                        "📅  View appointments",
+                        "➕  Add appointment",
+                        "✏️  Update appointment",
+                        "💾  Save all data",
+                        "🚪  Exit"
+                    }));
+
+            switch (choice.Split(' ')[0])   // first emoji token
             {
-                Console.WriteLine("\n----- Pet Management System -----");
-                Console.WriteLine("1. Display all owners");
-                Console.WriteLine("2. Add new owner");
-                Console.WriteLine("3. Update owner");
-                Console.WriteLine("4. Delete owner");
-                Console.WriteLine("5. Display all pets");
-                Console.WriteLine("6. Add new pet");
-                Console.WriteLine("7. Update a  pet");
-                Console.WriteLine("8. Delete a  pet");
-                Console.WriteLine("9. Exit");
-                Console.WriteLine("10. Save all data to database");
-                Console.WriteLine("11. view appointments");
-                Console.WriteLine("12. add appointment");
-                Console.WriteLine("13. Update appointment");
+                case "👥": CliUi.DisplayOwners(owners); break;
+                case "➕" when choice.Contains("owner"): CliUi.AddOwner(owners, db); break;
+                case "✏️" when choice.Contains("owner"): CliUi.UpdateOwner(owners, db); break;
+                case "🗑️" when choice.Contains("owner"): CliUi.DeleteOwner(owners, pets, db); break;
 
+                case "🐶": CliUi.DisplayPets(pets); break;
+                case "➕" when choice.Contains("pet"): CliUi.AddPet(owners, pets, db); break;
+                case "✏️" when choice.Contains("pet"): CliUi.UpdatePet(owners, pets); break;
+                case "🗑️" when choice.Contains("pet"): CliUi.DeletePet(pets, appts, db); break;
 
-                Console.Write("Choose an option: ");
+                case "📅": CliUi.ViewAppointments(appts); break;
+                case "➕" when choice.Contains("appointment"): CliUi.AddAppointment(appts, pets, owners); break;
+                case "✏️" when choice.Contains("appointment"): CliUi.UpdateAppointmentStatus(appts, pets, owners); break;
 
-                string choice = Console.ReadLine();
-
-                switch (choice)
-                {
-                    case "1":
-                        ownerService.DisplayOwners();
-                        break;
-
-                    case "2":
-                        var newOwner = CreateOwnerFromInput(ownerService, context);
-                        ownerService.AddOwner(newOwner);
-                        break;
-
-                    case "3":
-                        Console.Write("Enter Owner ID to update: ");
-                        int updateId = int.Parse(Console.ReadLine());
-                        var updatedOwner = CreateOwnerFromInput(ownerService, context, updateId);
-                        ownerService.UpdateOwner(updateId, updatedOwner);
-                        break;
-
-                    case "4":
-                        Console.Write("Enter Owner ID to delete: ");
-                        if (int.TryParse(Console.ReadLine(), out int deleteId))
-                        {
-                            var confirmed = DatabaseHelper.DeleteOwnerAndPetsFromDatabase(deleteId, context);
-
-                            if (confirmed)
-                            {
-                                // Only remove from hash tables if DB deletion is successful
-                                ownerService.DeleteOwner(deleteId);
-                                petService.DeletePetsByOwnerId(deleteId); // You may need to implement this method
-                                Console.WriteLine("Owner and their pets deleted from hash tables.");
-                            }
-                        }
-                        else
-                        {
-                            Console.WriteLine("Invalid ID.");
-                        }
-                        break;
-
-
-                    case "5":
-                        petService.DisplayPets();
-                        break;
-
-                    case "6":
-                        var newPet = CreatePetFromInput(ownerService , petService , context); // Pass ownerService!
-                        if (newPet != null)
-                            petService.AddPet(newPet);
-                        break;
-
-                    case "7": // Example menu case for update
-                        Console.WriteLine("Updating Pet");
-                        petService.UpdatePet(ownerService, petService);
-                        break;
-
-                    case "8":
-                        Console.Write("Enter Pet ID to delete: ");
-                        if (int.TryParse(Console.ReadLine(), out int deletePetId))
-                        {
-                            var deleted = DatabaseHelper.DeletePetAndAppointmentsFromDatabase(deletePetId, context);
-
-                            if (deleted)
-                            {
-                                // Only remove from hash tables if DB deletion is successful
-                                petService.DeletePet(deletePetId);
-                                appointmentService.DeleteAppointmentsByPetId(deletePetId);
-                                Console.WriteLine("Pet and their appointments deleted from hash tables.");
-                            }
-                            else
-                            {
-                                Console.WriteLine("Deletion failed. Pet not found.");
-                            }
-                        }
-                        else
-                        {
-                            Console.WriteLine("Invalid ID.");
-                        }
-
-                        break;
-
-
-
-
-
-                    case "9":
-                        Console.WriteLine("Exiting...");
-                        return;
-
-                    case "10":
-                        Console.WriteLine("Saving owners, pets, and appointments to the database...");
-
-                        string connectionString = "Data Source=HP;Initial Catalog=Cousework;Integrated Security=True;Trust Server Certificate=True";
-
-                        var ownerHashTable = ownerService.GetOwnerHashTable();
-                        var petHashTable = petService.GetPetHashTable();
-                        var appointmentHashTable = appointmentService.GetAppointmentHashTable(); 
-
-                        DatabaseHelper.SaveOwnersToDatabase(ownerHashTable, connectionString);
-                        DatabaseHelper.SavePetsToDatabase(petHashTable, connectionString);
-                        DatabaseHelper.SaveAppointmentsToDatabase(appointmentHashTable, connectionString); 
-
-                        Console.WriteLine("All data saved successfully.");
-                        break;
-
-
-                    case "11":
-                        appointmentService.DisplayAppointments();
-                        break;
-
-                    case "12":
-                        appointmentService.AddAppointment(petService, ownerService);
-                        break;
-
-                    case "13":
-                        // Update Appointment Status
-                        Console.WriteLine("\n--- Update Appointment Status ---");
-                        appointmentService.UpdateAppointmentStatus(petService, ownerService);
-                        break;
-
-                    default:
-                        Console.WriteLine("Invalid option.");
-                        break;
-                }
+                case "💾": CliUi.SaveAllData(owners, pets, appts); break;
+                case "🚪": return;
             }
         }
-
-        static Owner CreateOwnerFromInput(OwnerService ownerService, PetCareContext context, int? idOverride = null)
-        {
-            Console.Write("Enter Owner Name: ");
-            string name = Console.ReadLine();
-
-            Console.Write("Enter Owner Email: ");
-            string email = Console.ReadLine();
-
-            Console.Write("Enter Owner Phone: ");
-            string phone = Console.ReadLine();
-
-            Console.Write("Enter Owner Address: ");
-            string address = Console.ReadLine();
-
-            int ownerId = idOverride ?? ownerService.GenerateTrulyUniqueOwnerId(context);
-
-            return new Owner
-            {
-                OwnerId = ownerId,
-                Name = name,
-                Email = email,
-                Phone = phone,
-                Address = address
-            };
-        }
-
-        static Pet CreatePetFromInput(OwnerService ownerService, PetService petService, PetCareContext context, int? existingPetId = null)
-        {
-            Console.Write("Enter Pet Name: ");
-            string name = Console.ReadLine();
-
-            Console.Write("Enter Species: ");
-            string species = Console.ReadLine();
-
-            Console.Write("Enter Breed: ");
-            string breed = Console.ReadLine();
-
-            Console.Write("Enter Age: ");
-            int.TryParse(Console.ReadLine(), out int age);
-
-            Console.Write("Enter Gender (Male/Female): ");
-            string gender = Console.ReadLine();
-
-            Console.Write("Enter Medical History: ");
-            string medicalHistory = Console.ReadLine();
-
-            Console.Write("Enter Date Registered (dd/MM/yyyy): ");
-            DateTime.TryParseExact(Console.ReadLine(), "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out DateTime dateRegistered);
-
-            // --- Owner selection helper ---
-            Console.Write("Enter part of the owner's name or email: ");
-            string search = Console.ReadLine();
-
-            var matches = ownerService
-                .GetOwnerHashTable()
-                .GetAllElements()
-                .Where(o => o.Name.Contains(search, StringComparison.OrdinalIgnoreCase) ||
-                            o.Email.Contains(search, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-
-            if (matches.Count == 0)
-            {
-                Console.WriteLine("No matching owners found. Pet creation aborted.");
-                return null;
-            }
-
-            Console.WriteLine("\nMatching Owners:");
-            foreach (var owner in matches)
-            {
-                Console.WriteLine($"ID: {owner.OwnerId}, Name: {owner.Name}, Email: {owner.Email}");
-            }
-
-            Console.Write("\nEnter the Owner ID from the above list: ");
-            int.TryParse(Console.ReadLine(), out int ownerId);
-
-            // --- Create and return Pet object ---
-            return new Pet
-            {
-                PetId = petService.GenerateTrulyUniquePetId(context),
-                Name = name,
-                Species = species,
-                Breed = breed,
-                Age = age,
-                Gender = gender,
-                MedicalHistory = medicalHistory,
-                DateRegistered = dateRegistered,
-                OwnerId = ownerId
-            };
-        }
-
-
     }
 }
