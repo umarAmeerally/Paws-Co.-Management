@@ -1,6 +1,7 @@
 ﻿using Cousework.DataStructures;
 using Cousework.Models;
 using Microsoft.EntityFrameworkCore;
+using Spectre.Console;
 using System;
 using System.Linq;
 
@@ -43,8 +44,7 @@ namespace Cousework.Services
         public static Pet PromptForPetByOwner(OwnerService ownerService, PetService petService)
         {
             // Prompt user for the owner's name or email
-            Console.Write("Enter part of the owner's name or email: ");
-            string search = Console.ReadLine();
+            string search = AnsiConsole.Ask<string>("Enter part of the owner's [blue]name or email[/]:");
 
             // Find matching owners
             var matchingOwners = ownerService
@@ -54,59 +54,49 @@ namespace Cousework.Services
                             o.Email.Contains(search, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            if (matchingOwners.Count == 0)
+            if (!matchingOwners.Any())
             {
-                Console.WriteLine("No matching owners found.");
+                Warn("No owner matches.");
                 return null;
             }
 
-            // Display matching owners
-            Console.WriteLine("\nMatching Owners:");
-            foreach (var owner in matchingOwners)
+            // Let the user select the owner from the matching list using a selection prompt
+            var selectedOwner = AnsiConsole.Prompt(
+                new SelectionPrompt<Owner>()
+                    .Title("[blue]Select Owner[/]")
+                    .UseConverter(owner => Markup.Escape($"[{owner.OwnerId}] {owner.Name} ({owner.Email})"))
+                    .AddChoices(matchingOwners)
+            );
+
+            // Find all pets for the selected owner
+            var petsOwnedByOwner = petService
+                .GetPetHashTable()
+                .GetAllElements()
+                .Where(p => p.OwnerId == selectedOwner.OwnerId)
+                .ToList();
+
+            if (!petsOwnedByOwner.Any())
             {
-                Console.WriteLine($"ID: {owner.OwnerId}, Name: {owner.Name}, Email: {owner.Email}");
+                AnsiConsole.MarkupLine("[red]This owner does not have any pets.[/]");
+                return null;
             }
 
-            // Let the user select the owner from the matching list
-            Console.Write("\nEnter the Owner ID from the above list: ");
-            if (int.TryParse(Console.ReadLine(), out int ownerId))
-            {
-                // Find all pets for this owner
-                var petsOwnedByOwner = petService
-                    .GetPetHashTable()
-                    .GetAllElements()
-                    .Where(p => p.OwnerId == ownerId)
-                    .ToList();
+            // Let the user select the pet using a selection prompt
+            var selectedPet = AnsiConsole.Prompt(
+                new SelectionPrompt<Pet>()
+                    .Title("[blue]Select Pet to Update[/]")
+                    .UseConverter(pet => Markup.Escape($"[{pet.PetId}] {pet.Name} ({pet.Breed})"))
+                    .AddChoices(petsOwnedByOwner)
+            );
 
-                if (petsOwnedByOwner.Count == 0)
-                {
-                    Console.WriteLine("This owner does not have any pets.");
-                    return null;
-                }
-
-                // Display pets for the selected owner
-                Console.WriteLine("\nMatching Pets:");
-                foreach (var pet in petsOwnedByOwner)
-                {
-                    Console.WriteLine($"Pet ID: {pet.PetId}, Name: {pet.Name}, Breed: {pet.Breed}");
-                }
-
-                // Let the user select the pet
-                Console.Write("\nEnter the Pet ID to update: ");
-                if (int.TryParse(Console.ReadLine(), out int petId))
-                {
-                    var petToUpdate = petsOwnedByOwner.FirstOrDefault(p => p.PetId == petId);
-                    return petToUpdate;
-                }
-            }
-
-            return null;
+            return selectedPet;
         }
+
 
 
         public bool UpdatePet(OwnerService ownerService, PetService petService)
         {
-            // Prompt user to select the pet by owner's name
+            // Step 1: Prompt user to select the pet by owner's name or email
             var petToUpdate = PromptForPetByOwner(ownerService, petService);
 
             if (petToUpdate == null)
@@ -115,42 +105,55 @@ namespace Cousework.Services
                 return false;
             }
 
-            // Now update the pet details
+            // Step 2: Updating pet details with prompts
             Console.WriteLine("Updating pet details. Press Enter to keep the current value.\n");
 
-            Console.Write($"Enter Pet Name ({petToUpdate.Name}): ");
-            string name = Console.ReadLine();
-            petToUpdate.Name = string.IsNullOrWhiteSpace(name) ? petToUpdate.Name : name;
+            // Pet Name (with prompt and validation)
+            string name = PromptValidNameUpdate("Pet Name", petToUpdate.Name);
+            petToUpdate.Name = name;
 
-            Console.Write($"Enter Species ({petToUpdate.Species}): ");
-            string species = Console.ReadLine();
+            // Species
+            string species = AnsiConsole.Ask<string>($"Species [grey](press Enter to keep current: {petToUpdate.Species})[/]", petToUpdate.Species);
             petToUpdate.Species = string.IsNullOrWhiteSpace(species) ? petToUpdate.Species : species;
 
-            Console.Write($"Enter Breed ({petToUpdate.Breed}): ");
-            string breed = Console.ReadLine();
+            // Breed
+            string breed = AnsiConsole.Ask<string>($"Breed [grey](press Enter to keep current: {petToUpdate.Breed})[/]", petToUpdate.Breed);
             petToUpdate.Breed = string.IsNullOrWhiteSpace(breed) ? petToUpdate.Breed : breed;
 
-            Console.Write($"Enter Age ({petToUpdate.Age}): ");
-            string ageInput = Console.ReadLine();
-            if (int.TryParse(ageInput, out int newAge))
-                petToUpdate.Age = newAge;
+            // Age (with validation and Enter-to-keep)
+            petToUpdate.Age = PromptValidIntUpdate("Age", petToUpdate.Age ?? 0);
 
-            Console.Write($"Enter Gender ({petToUpdate.Gender}): ");
-            string gender = Console.ReadLine();
-            petToUpdate.Gender = string.IsNullOrWhiteSpace(gender) ? petToUpdate.Gender : gender;
+            // Gender (selection prompt)
+            string gender = AnsiConsole.Prompt(
+                new SelectionPrompt<string>()
+                    .Title($"Gender ({petToUpdate.Gender})")
+                    .AddChoices("Male", "Female")
+            );
+            petToUpdate.Gender = gender;
 
-            Console.Write($"Enter Medical History ({petToUpdate.MedicalHistory}): ");
-            string history = Console.ReadLine();
-            petToUpdate.MedicalHistory = string.IsNullOrWhiteSpace(history) ? petToUpdate.MedicalHistory : history;
+            // Medical History (multi-selection with default)
+            var historyChoices = AnsiConsole.Prompt(
+                new MultiSelectionPrompt<string>()
+                    .Title($"Medical History ({petToUpdate.MedicalHistory})")
+                    .NotRequired()
+                    .InstructionsText("[violet](Press space to select, enter to confirm)[/]")
+                    .AddChoices("Vaccinated", "Has Allergies", "Has Chronic Illness", "Recently Treated", "None")
+            );
 
-            Console.Write($"Enter Date Registered ({petToUpdate.DateRegistered:dd/MM/yyyy}): ");
-            string dateInput = Console.ReadLine();
-            if (DateTime.TryParseExact(dateInput, "dd/MM/yyyy", null, System.Globalization.DateTimeStyles.None, out DateTime newDate))
-                petToUpdate.DateRegistered = newDate;
+            string medicalHistory = historyChoices.Any() ? string.Join(", ", historyChoices) : "None"; // Default to "None" if nothing selected
+            petToUpdate.MedicalHistory = medicalHistory;
+
+            // Date Registered (Auto-assigned to current date, no change needed)
+            DateTime dateRegistered = DateTime.Now;
+            petToUpdate.DateRegistered = dateRegistered;
 
             Console.WriteLine($"Pet with ID {petToUpdate.PetId} updated successfully.");
             return true;
         }
+
+
+
+
 
 
 
@@ -205,10 +208,47 @@ namespace Cousework.Services
             return newId;
         }
 
-        public HashTable<Pet> GetPetHashTable() => _petTable;
-    
+        public static string PromptValidNameUpdate(string prompt, string currentValue)
+        {
+            while (true)
+            {
+                var input = AnsiConsole.Ask<string>($"{prompt} [grey](press Enter to keep current: {currentValue})[/]", currentValue);
 
-    
+                // If the user presses Enter, input will equal currentValue (because it's passed as default)
+                if (string.IsNullOrWhiteSpace(input))
+                    return currentValue;
+
+                if (input.Length >= 2)
+                    return input;
+
+                AnsiConsole.MarkupLine("[red]Name must be at least 2 characters.[/]");
+            }
+        }
+
+
+        public static int PromptValidIntUpdate(string prompt, int currentValue, int min = 0, int max = int.MaxValue)
+        {
+            while (true)
+            {
+                var input = AnsiConsole.Ask<string>($"{prompt} [grey](press Enter to keep current: {currentValue})[/]", currentValue.ToString());
+
+                if (string.IsNullOrWhiteSpace(input))
+                    return currentValue;
+
+                if (int.TryParse(input, out int result) && result >= min && result <= max)
+                    return result;
+
+                AnsiConsole.MarkupLine($"[red]Please enter a valid number between {min} and {max}.[/]");
+            }
+        }
+
+
+        public HashTable<Pet> GetPetHashTable() => _petTable;
+
+        static void Warn(string msg) => AnsiConsole.MarkupLine($"[red]{msg}[/]");
+        static string Ask(string label, string def = "") =>
+        AnsiConsole.Ask<string>($"[dodgerblue1]{label}[/]", def);
+
 
     }
 

@@ -84,7 +84,12 @@ namespace Cousework.Services
             return newId;
         }
 
-   
+        public Owner GetOwnerById(int ownerId)
+        {
+            return _ownerTable.SearchByKey(ownerId);
+        }
+
+
 
         public HashTable<Owner> GetOwnerHashTable() => _ownerTable;
 

@@ -23,6 +23,9 @@ class Program
                 .Centered()
                 .Color(Spectre.Console.Color.SpringGreen3));
 
+        bool isCsvMode = false;
+
+
         // ─── choose data source ───────────────────────────────────────────
         var srcChoice = AnsiConsole.Prompt(
             new SelectionPrompt<MenuItem>()
@@ -40,8 +43,9 @@ class Program
         switch (srcChoice.Value)
         {
             case DataSource.Csv:
+                isCsvMode = true; // <-- Add this line
                 string csvPath = AnsiConsole.Ask<string>(
-                    "CSV path?", "C:\\Users\\akash\\Downloads\\dummy_pets_data.csv");
+                    "CSV path?", "C:\\Users\\thera\\Desktop\\pet_management_data.csv");
 
                 AnsiConsole.Status().Spinner(Spinner.Known.Dots)
                     .Start("Parsing CSV…", _ =>
@@ -58,6 +62,7 @@ class Program
                 break;
 
             case DataSource.Database:
+                isCsvMode = false;
                 AnsiConsole.Status().Spinner(Spinner.Known.Line)
                     .Start("Loading DB…", _ =>
                     {
@@ -73,7 +78,7 @@ class Program
         var petSvc = new PetService(context, petTable, ownerTable);
         var apptSvc = new AppointmentService(apptTable);
 
-        RunMenu(ownerSvc, petSvc, apptSvc, context);
+        RunMenu(ownerSvc, petSvc, apptSvc, context , isCsvMode);
     }
 
     // ─────────────────────────────────────────────────────────────────────
@@ -81,7 +86,8 @@ class Program
         OwnerService owners,
         PetService pets,
         AppointmentService appts,
-        PetCareContext db)
+        PetCareContext db,
+        bool isCsvMode)
     {
         while (true)
         {
@@ -111,12 +117,30 @@ class Program
                 case "👥": CliUi.DisplayOwners(owners); break;
                 case "➕" when choice.Contains("owner"): CliUi.AddOwner(owners, db); break;
                 case "✏️" when choice.Contains("owner"): CliUi.UpdateOwner(owners, db); break;
-                case "🗑️" when choice.Contains("owner"): CliUi.DeleteOwner(owners, pets, db); break;
+                case "🗑️" when choice.Contains("owner"):
+                    if (isCsvMode)
+                    {
+                        AnsiConsole.MarkupLine("[yellow]⚠ Deletion is disabled in CSV mode. Reload from the database to delete.[/]");
+                    }
+                    else
+                    {
+                        CliUi.DeleteOwner(owners, pets, db);
+                    }
+                    break;
 
                 case "🐶": CliUi.DisplayPets(pets); break;
                 case "➕" when choice.Contains("pet"): CliUi.AddPet(owners, pets, db); break;
                 case "✏️" when choice.Contains("pet"): CliUi.UpdatePet(owners, pets); break;
-                case "🗑️" when choice.Contains("pet"): CliUi.DeletePet(pets, appts, db); break;
+                case "🗑️" when choice.Contains("pet"):
+                    if (isCsvMode)
+                    {
+                        AnsiConsole.MarkupLine("[yellow]⚠ Deletion is disabled in CSV mode. Reload from the database to delete.[/]");
+                    }
+                    else
+                    {
+                        CliUi.DeletePet(pets, appts, owners, db);
+                    }
+                    break;
 
                 case "📅": CliUi.ViewAppointments(appts); break;
                 case "➕" when choice.Contains("appointment"): CliUi.AddAppointment(appts, pets, owners); break;
@@ -125,6 +149,7 @@ class Program
                 case "💾": CliUi.SaveAllData(owners, pets, appts); break;
                 case "🚪": return;
             }
+
         }
     }
 }
