@@ -1,26 +1,22 @@
 ﻿using Cousework.DataStructures;
 using Cousework.Models;
 using Cousework.Services;
-using Spectre.Console;
-
-using Cousework.DataStructures;
-using Cousework.Models;
-using Cousework.Services;
+using Cousework.Utils;
 using Spectre.Console;
 using System;
 using System.Linq;
-
-// ── Alias Spectre.Console.Table to avoid clash with EF‑Core's metadata Table
-using ConsoleTable = Spectre.Console.Table;
 using System.Text.RegularExpressions;
+
+// Alias Spectre.Console.Table to avoid clash with EF‑Core metadata Table
+using ConsoleTable = Spectre.Console.Table;
 
 namespace Cousework;
 
 public static class CliUi
 {
-    // ─────────────────────────────────────────────────────────────────────
+    
     //  Load‑summary table
-    // ─────────────────────────────────────────────────────────────────────
+    
     public static void ShowLoadSummary(
         HashTable<Owner> owners,
         HashTable<Pet> pets,
@@ -33,7 +29,6 @@ public static class CliUi
 
         t.AddColumn("Entity");
         t.AddColumn("Count");
-
         t.AddRow("Owners", owners.Count().ToString());
         t.AddRow("Pets", pets.Count().ToString());
         t.AddRow("Appointments", appts.Count().ToString());
@@ -41,21 +36,20 @@ public static class CliUi
         AnsiConsole.Write(t);
     }
 
-    // ─────────────────────────────────────────────────────────────────────
+    
     //  Owners
-    // ─────────────────────────────────────────────────────────────────────
+    
     public static void DisplayOwners(OwnerService svc)
         => RenderTable(svc.GetOwnerHashTable().GetAllElements());
 
     public static void AddOwner(OwnerService svc, PetCareContext ctx)
     {
-
         AnsiConsole.MarkupLine("[bold green]📝 Add New Owner[/]");
 
         var owner = new Owner
         {
             OwnerId = svc.GenerateTrulyUniqueOwnerId(ctx),
-            Name = PromptValidName("[blue]Owner Name[/] (e.g. John Doe):"),
+            Name = PromptValidName("[blue]Owner Name[/] (e.g. John Doe):"),
             Email = PromptValidEmail("[blue]Email[/] (e.g. john@example.com):"),
             Phone = PromptValidPhone("[blue]Phone[/] (optional, e.g. +447123456789):"),
             Address = PromptValidAddress("[blue]Address[/] (optional):")
@@ -65,7 +59,7 @@ public static class CliUi
         Success("Owner added.");
     }
 
-    public static void UpdateOwner(OwnerService svc, PetCareContext ctx )
+    public static void UpdateOwner(OwnerService svc, PetCareContext ctx)
     {
         AnsiConsole.MarkupLine("[bold blue]🔍 Search for Owner to Update[/]");
 
@@ -75,11 +69,7 @@ public static class CliUi
                         (o.Email ?? "").Contains(search, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        if (!owners.Any())
-        {
-            Warn("No owner matches.");
-            return;
-        }
+        if (!owners.Any()) { Warn("No owner matches."); return; }
 
         var cur = AnsiConsole.Prompt(
             new SelectionPrompt<Owner>()
@@ -89,16 +79,15 @@ public static class CliUi
 
         var upd = new Owner
         {
-            Name = PromptValidNameUpdate($"[blue]Owner Name[/] (current: {cur.Name}):", cur.Name),
-            Email = PromptValidEmailUpdate($"[blue]Email[/] (current: {cur.Email}):", cur.Email),
-            Phone = PromptValidPhoneUpdate($"[blue]Phone[/] (current: {cur.Phone}):", cur.Phone),
-            Address = PromptValidAddressUpdate($"[blue]Address[/] (current: {cur.Address}):", cur.Address)
+            Name = PromptValidNameUpdate("[blue]Owner Name[/] (current):", cur.Name),
+            Email = PromptValidEmailUpdate("[blue]Email[/] (current):", cur.Email),
+            Phone = PromptValidPhoneUpdate("[blue]Phone[/] (current):", cur.Phone),
+            Address = PromptValidAddressUpdate("[blue]Address[/] (current):", cur.Address)
         };
 
         svc.UpdateOwner(cur.OwnerId, upd);
         Success("Owner updated.");
     }
-
 
     public static void DeleteOwner(OwnerService oSvc, PetService pSvc, PetCareContext db)
     {
@@ -110,22 +99,17 @@ public static class CliUi
                         (o.Email ?? "").Contains(search, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        if (!owners.Any())
-        {
-            Warn("No owner matches.");
-            return;
-        }
+        if (!owners.Any()) { Warn("No owner matches."); return; }
 
         var selected = AnsiConsole.Prompt(
             new SelectionPrompt<Owner>()
                 .Title("Select owner to delete")
                 .UseConverter(o => Markup.Escape($"[{o.OwnerId}] {o.Name} ({o.Email})"))
-                .AddChoices(owners)
-        );
+                .AddChoices(owners));
 
-        if (!AnsiConsole.Confirm($"Are you sure you want to delete [red]{selected.Name}[/] and all their pets/appointments?"))
+        if (!AnsiConsole.Confirm($"Delete [red]{selected.Name}[/] and all their pets/appointments?"))
         {
-            AnsiConsole.MarkupLine("[yellow]⚠️ Deletion cancelled.[/]");
+            AnsiConsole.MarkupLine("[yellow]Deletion cancelled.[/]");
             return;
         }
 
@@ -140,61 +124,49 @@ public static class CliUi
         else Warn("Owner not found.");
     }
 
-
-    // ─────────────────────────────────────────────────────────────────────
+    
     //  Pets
-    // ─────────────────────────────────────────────────────────────────────
+    
     public static void DisplayPets(PetService svc)
         => RenderTable(svc.GetPetHashTable().GetAllElements());
 
     public static void AddPet(OwnerService oSvc, PetService pSvc, PetCareContext ctx)
     {
-        // Search for the owner by name or email
         string search = Ask("Part of owner name/email");
         var owners = oSvc.GetOwnerHashTable().GetAllElements()
             .Where(o => (o.Name ?? "").Contains(search, StringComparison.OrdinalIgnoreCase) ||
                         (o.Email ?? "").Contains(search, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        if (!owners.Any())
-        {
-            Warn("No owner matches.");
-            return;
-        }
+        if (!owners.Any()) { Warn("No owner matches."); return; }
 
-        // Let user select the owner
         var owner = AnsiConsole.Prompt(
             new SelectionPrompt<Owner>()
                 .Title("Select owner")
                 .UseConverter(o => Markup.Escape($"[{o.OwnerId}] {o.Name} ({o.Email})"))
                 .AddChoices(owners));
 
-        // Add pet details with validations
         string name = PromptValidName("[blue]Pet Name[/] (e.g. Bella):");
         string species = Ask("[blue]Species[/] (e.g. Dog, Cat):");
         string breed = Ask("[blue]Breed[/] (optional):");
         int age = PromptValidInt("[blue]Age[/] (e.g. 3):", min: 0);
 
-        // Gender selection with options
         string gender = AnsiConsole.Prompt(
             new SelectionPrompt<string>()
                 .Title("[blue]Gender[/]")
-                .AddChoices("Male", "Female")
-        );
+                .AddChoices("Male", "Female"));
 
         var historyChoices = AnsiConsole.Prompt(
-        new MultiSelectionPrompt<string>()
-        .Title("[blue]Medical History[/] (Select one or more)")
-        .NotRequired()
-        .InstructionsText("[violet](Press space to select, enter to confirm)[/]")
-        .AddChoices("Vaccinated", "Has Allergies", "Has Chronic Illness", "Recently Treated", "None")
-);
+            new MultiSelectionPrompt<string>()
+                .Title("[blue]Medical History[/] (space = select, enter = confirm)")
+                .NotRequired()
+                .AddChoices("Vaccinated", "Has Allergies", "Chronic Illness",
+                            "Recently Treated", "None"));
 
-        // Check if any choices were selected
-        string medicalHistory = historyChoices.Any() ? string.Join(", ", historyChoices) : "None"; // Default to "None" if nothing selected
-        DateTime dateRegistered = DateTime.Now; // Auto-assign current date
+        string medicalHistory = historyChoices.Any()
+            ? string.Join(", ", historyChoices)
+            : "None";
 
-        // Create a new Pet object with the validated inputs
         var pet = new Pet
         {
             PetId = pSvc.GenerateTrulyUniquePetId(ctx),
@@ -205,16 +177,12 @@ public static class CliUi
             Age = age,
             Gender = gender,
             MedicalHistory = medicalHistory,
-            DateRegistered = dateRegistered
+            DateRegistered = DateTime.Now
         };
 
-        // Add the pet to the service
         pSvc.AddPet(pet);
-
-        // Success message
         Success("Pet added.");
     }
-
 
     public static void UpdatePet(OwnerService oSvc, PetService pSvc)
     {
@@ -222,68 +190,52 @@ public static class CliUi
             Success("Pet updated.");
     }
 
-    public static void DeletePet(PetService pSvc, AppointmentService aSvc, OwnerService oSvc, PetCareContext db)
+    public static void DeletePet(
+        PetService pSvc,
+        AppointmentService aSvc,
+        OwnerService oSvc,
+        PetCareContext db)
     {
-        string search = Ask("Enter part of Pet Name or Owner Name");
+        string search = Ask("Part of Pet Name or Owner Name");
 
-        // Match owners by name
         var matchingOwners = oSvc.GetOwnerHashTable().GetAllElements()
             .Where(o => o.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
             .ToList();
 
-        // Get all pets that match the pet name or belong to matching owners
-        var petsByOwners = matchingOwners
-            .SelectMany(owner => pSvc.GetPetHashTable().GetAllElements()
-                .Where(p => p.OwnerId == owner.OwnerId))
-            .ToList();
+        var petsByOwners = matchingOwners.SelectMany(owner =>
+            pSvc.GetPetHashTable().GetAllElements()
+                .Where(p => p.OwnerId == owner.OwnerId));
 
         var petsByName = pSvc.GetPetHashTable().GetAllElements()
-            .Where(p => p.Name.Contains(search, StringComparison.OrdinalIgnoreCase))
-            .ToList();
+            .Where(p => p.Name.Contains(search, StringComparison.OrdinalIgnoreCase));
 
-        // Combine both and remove duplicates
-        var allMatches = petsByName
-            .Concat(petsByOwners)
-            .GroupBy(p => p.PetId)
-            .Select(g => g.First())
-            .ToList();
+        var allMatches = petsByName.Concat(petsByOwners)
+            .GroupBy(p => p.PetId).Select(g => g.First()).ToList();
 
-        if (!allMatches.Any())
-        {
-            Warn("No matching pets found.");
-            return;
-        }
+        if (!allMatches.Any()) { Warn("No matching pets."); return; }
 
-        // Select which pet to delete
         var selectedPet = AnsiConsole.Prompt(
             new SelectionPrompt<Pet>()
-                .Title("Select the pet to delete:")
+                .Title("Select pet to delete:")
                 .UseConverter(p =>
                 {
                     var owner = oSvc.GetOwnerById(p.OwnerId ?? 0);
                     return $"[{p.PetId}] {p.Name} - {p.Species} ({owner?.Name ?? "Unknown Owner"})";
                 })
-                .AddChoices(allMatches)
-        );
+                .AddChoices(allMatches));
 
-        // Perform deletion
         if (DatabaseHelper.DeletePetAndAppointmentsFromDatabase(selectedPet.PetId, db))
         {
             pSvc.DeletePet(selectedPet.PetId);
             aSvc.DeleteAppointmentsByPetId(selectedPet.PetId);
             Success("Pet & appointments deleted.");
         }
-        else
-        {
-            Warn("Pet not found.");
-        }
+        else Warn("Pet not found.");
     }
 
-
-
-    // ─────────────────────────────────────────────────────────────────────
+    
     //  Appointments
-    // ─────────────────────────────────────────────────────────────────────
+    
     public static void ViewAppointments(AppointmentService svc)
         => RenderTable(svc.GetAppointmentHashTable().GetAllElements());
 
@@ -296,15 +248,54 @@ public static class CliUi
             Success("Appointment updated.");
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    //  Save to DB
-    // ─────────────────────────────────────────────────────────────────────
+    
+    //  Search (Owners / Pets / Appointments)
+    
+    public static void SearchData(
+        OwnerService oSvc,
+        PetService pSvc,
+        AppointmentService aSvc)
+    {
+        var entity = AnsiConsole.Prompt(
+            new SelectionPrompt<string>()
+                .Title("Search in:")
+                .AddChoices("Owners", "Pets", "Appointments"));
+
+        string term = Ask("Enter search term").ToLowerInvariant();
+
+        switch (entity)
+        {
+            case "Owners":
+                var owners = oSvc.GetOwnerHashTable().GetAllElements()
+                    .Where(o => $"{o.OwnerId} {o.Name} {o.Email}".ToLower().Contains(term));
+                RenderTable(owners);
+                break;
+
+            case "Pets":
+                var pets = pSvc.GetPetHashTable().GetAllElements()
+                    .Where(p => $"{p.PetId} {p.Name} {p.Species} {p.Breed}".ToLower().Contains(term));
+                RenderTable(pets);
+                break;
+
+            case "Appointments":
+                var appts = aSvc.GetAppointmentHashTable().GetAllElements()
+                    .Where(a => a.ToString().ToLower().Contains(term));
+                RenderTable(appts);
+                break;
+        }
+    }
+
+    
+    //  Save all data to DB
+    
     public static void SaveAllData(
-        OwnerService oSvc, PetService pSvc, AppointmentService aSvc)
+        OwnerService oSvc,
+        PetService pSvc,
+        AppointmentService aSvc)
     {
         if (!AnsiConsole.Confirm("Save all data to database?")) return;
 
-        string cs = "Data Source=HP;Initial Catalog=Cousework;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
+        string cs = "Data Source=AKASH;Initial Catalog=updateddbms;Integrated Security=True;Trust Server Certificate=True";
 
         AnsiConsole.Status().Spinner(Spinner.Known.Line).Start("Saving…", _ =>
         {
@@ -316,42 +307,30 @@ public static class CliUi
         Success("All data saved.");
     }
 
-    // ─────────────────────────────────────────────────────────────────────
-    //  Helpers
-    // ─────────────────────────────────────────────────────────────────────
+    
+    //  Helper prompts & validators
+    
     static string Ask(string label, string def = "")
+        => AnsiConsole.Ask<string>($"[dodgerblue1]{label}[/]", def);
+
+    static int PromptValidInt(string msg, int min = 0, int max = 100)
     {
-        // Ask the user for input
-        var input = AnsiConsole.Ask<string>($"[dodgerblue1]{label}[/]", def);
-
-        // If no input was provided, return the default value
-        return string.IsNullOrWhiteSpace(input) ? def : input;
+        while (true)
+        {
+            var input = Ask(msg);
+            if (int.TryParse(input, out int v) && v >= min && v <= max) return v;
+            Warn($"Enter a number between {min} and {max}.");
+        }
     }
-
-
-    static int AskInt(string label) =>
-        AnsiConsole.Ask<int>($"[dodgerblue1]{label}[/]");
-
-    static void Success(string msg) => AnsiConsole.MarkupLine($"[green]✔ {msg}[/]");
-    static void Warn(string msg) => AnsiConsole.MarkupLine($"[red]{msg}[/]");
 
     static string PromptValidName(string label)
     {
         while (true)
         {
             var input = Ask(label).Trim();
-            if (input.Length == 0)
-            {
-                Warn("Name is required.");
-            }
-            else if (input.Length > 100)
-            {
-                Warn("Name must be under 100 characters.");
-            }
-            else if (!input.All(c => char.IsLetter(c) || c == ' '))
-            {
-                Warn("Name can only contain letters and spaces.");
-            }
+            if (input.Length == 0) Warn("Name required.");
+            else if (input.Length > 100) Warn("Max 100 chars.");
+            else if (!input.All(c => char.IsLetter(c) || c == ' ')) Warn("Letters/spaces only.");
             else return input;
         }
     }
@@ -361,14 +340,9 @@ public static class CliUi
         while (true)
         {
             var input = Ask(label).Trim();
-            if (input.Length == 0)
-            {
-                Warn("Email is required.");
-            }
-            else if (!input.Contains('@') || !input.Contains('.'))
-            {
+            if (input.Length == 0) Warn("Email required.");
+            else if (!Regex.IsMatch(input, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
                 Warn("Invalid email format.");
-            }
             else return input;
         }
     }
@@ -378,10 +352,9 @@ public static class CliUi
         while (true)
         {
             var input = Ask(label).Trim();
-            if (string.IsNullOrEmpty(input)) return "";  // optional
-            if (input.All(c => char.IsDigit(c) || "+-() ".Contains(c)))
-                return input;
-            else Warn("Phone can only contain digits, spaces, +, -, (, ).");
+            if (input == "") return "";  // optional
+            if (Regex.IsMatch(input, @"^[\\d\\+\\-\\(\\)\\s]{7,15}$")) return input;
+            Warn("Digits, +‑()‑space only.");
         }
     }
 
@@ -390,107 +363,39 @@ public static class CliUi
         while (true)
         {
             var input = Ask(label).Trim();
-            if (input.Length == 0) return "";  // optional
-            if (input.Length > 255)
-            {
-                Warn("Address must be less than 255 characters.");
-            }
-            else return input;
+            if (input == "") return "";          // optional
+            if (input.Length <= 255) return input;
+            Warn("Max 255 chars.");
         }
     }
 
-    public static string PromptValidNameUpdate(string prompt, string currentValue)
+    // update variants (Enter = keep current)
+    static string PromptValidNameUpdate(string prompt, string cur)
     {
-        while (true)
-        {
-            var input = AnsiConsole.Ask<string>(
-                $"{prompt} [grey](press Enter to keep current)[/]",
-                currentValue
-            );
-
-            if (string.IsNullOrWhiteSpace(input))
-                return currentValue;
-
-            if (input.Length >= 2)
-                return input;
-
-            AnsiConsole.MarkupLine("[red]Name must be at least 2 characters.[/]");
-        }
+        var input = Ask($"{prompt} [grey](Enter = keep)[/]", cur).Trim();
+        return string.IsNullOrWhiteSpace(input) ? cur : input;
+    }
+    static string PromptValidEmailUpdate(string prompt, string cur)
+    {
+        var input = Ask($"{prompt} [grey](Enter = keep)[/]", cur).Trim();
+        return string.IsNullOrWhiteSpace(input) ? cur : input;
+    }
+    static string PromptValidPhoneUpdate(string prompt, string cur)
+    {
+        var input = Ask($"{prompt} [grey](Enter = keep)[/]", cur).Trim();
+        return string.IsNullOrWhiteSpace(input) ? cur : input;
+    }
+    static string PromptValidAddressUpdate(string prompt, string cur)
+    {
+        var input = Ask($"{prompt} [grey](Enter = keep)[/]", cur).Trim();
+        return string.IsNullOrWhiteSpace(input) ? cur : input;
     }
 
-    public static string PromptValidEmailUpdate(string prompt, string currentValue)
-    {
-        while (true)
-        {
-            var input = AnsiConsole.Ask<string>(
-                $"{prompt} [grey](press Enter to keep current)[/]",
-                currentValue
-            );
-
-            if (string.IsNullOrWhiteSpace(input))
-                return currentValue;
-
-            if (Regex.IsMatch(input, @"^[^@\s]+@[^@\s]+\.[^@\s]+$"))
-                return input;
-
-            AnsiConsole.MarkupLine("[red]Invalid email format.[/]");
-        }
-    }
-
-    public static string PromptValidPhoneUpdate(string prompt, string currentValue)
-    {
-        while (true)
-        {
-            var input = AnsiConsole.Ask<string>(
-                $"{prompt} [grey](press Enter to keep current)[/]",
-                currentValue
-            );
-
-            if (string.IsNullOrWhiteSpace(input))
-                return currentValue;
-
-            if (Regex.IsMatch(input, @"^\+?[0-9\s\-()]{7,15}$"))
-                return input;
-
-            AnsiConsole.MarkupLine("[red]Invalid phone number format.[/]");
-        }
-    }
-
-    public static string PromptValidAddressUpdate(string prompt, string currentValue)
-    {
-        var input = AnsiConsole.Ask<string>(
-            $"{prompt} [grey](press Enter to keep current)[/]",
-            currentValue
-        );
-
-        return string.IsNullOrWhiteSpace(input) ? currentValue : input;
-    }
-
-
-
-    public static int PromptValidInt(string message, int min = 0, int max = 100)
-    {
-        while (true)
-        {
-            var input = AnsiConsole.Ask<string>(message);
-
-            if (int.TryParse(input, out int value))
-            {
-                if (value >= min && value <= max)
-                    return value;
-                else
-                    Warn($"Please enter a number between {min} and {max}.");
-            }
-            else
-            {
-                Warn("Invalid number. Please enter a valid integer.");
-            }
-        }
-    }
-
-
-
-
+    
+    //  Spectre helpers
+    
+    public static void Success(string msg) => AnsiConsole.MarkupLine($"[green]✔ {msg}[/]");
+    public static void Warn(string msg) => AnsiConsole.MarkupLine($"[red]{msg}[/]");
 
     static void RenderTable<T>(System.Collections.Generic.IEnumerable<T> rows)
     {
@@ -501,4 +406,3 @@ public static class CliUi
         AnsiConsole.Write(t);
     }
 }
-
