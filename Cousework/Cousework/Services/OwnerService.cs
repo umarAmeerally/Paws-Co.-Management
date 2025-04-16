@@ -71,7 +71,7 @@ namespace Cousework.Services
 
             do
             {
-                newId = rand.Next(0, 9999);
+                newId = rand.Next(0, 1000000);
 
                 // Check in both hash table and database
                 bool inHash = _ownerTable.GetAllElements().Any(o => o.OwnerId == newId);

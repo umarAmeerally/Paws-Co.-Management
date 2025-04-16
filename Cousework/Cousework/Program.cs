@@ -39,7 +39,7 @@ class Program
         {
             case DataSource.Csv:
                 {
-                    string csvPath = AnsiConsole.Ask<string>("CSV path?", "C:/Users/akash/Desktop/pet_management_data.csv");
+                    string csvPath = AnsiConsole.Ask<string>("CSV path?", "C:/Users/thera/Desktop/pet_management_data.csv");
                     AnsiConsole.Status().Spinner(Spinner.Known.Dots).Start("Parsing CSV…", _ =>
                     {
                         var csv = new CSVReader();

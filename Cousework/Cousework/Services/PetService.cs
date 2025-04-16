@@ -196,7 +196,7 @@ namespace Cousework.Services
 
             do
             {
-                newId = rand.Next(0, 9999);
+                newId = rand.Next(0, 1000000);
 
                 bool inHash = _petTable.GetAllElements().Any(p => p.PetId == newId);
                 bool inDb = context.Pets.Any(p => p.PetId == newId);

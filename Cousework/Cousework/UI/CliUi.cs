@@ -295,7 +295,7 @@ public static class CliUi
     {
         if (!AnsiConsole.Confirm("Save all data to database?")) return;
 
-        string cs = "Data Source=AKASH;Initial Catalog=updateddbms;Integrated Security=True;Trust Server Certificate=True";
+        string cs = "Data Source=HP;Initial Catalog=Cousework;Integrated Security=True;Encrypt=True;Trust Server Certificate=True";
 
         AnsiConsole.Status().Spinner(Spinner.Known.Line).Start("Saving…", _ =>
         {
