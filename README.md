@@ -4,7 +4,7 @@ year 2 software engineering module coursework
 # Getting started
 Clone the repo
 Make sure to choose the **Master** branch as it contains updated codes.
-Restore dependencies (Packages) and build
+Restore dependencies (Packages) and buid.
 Run the project file.
 
 # Storage mode
