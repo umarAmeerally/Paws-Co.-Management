@@ -1,0 +1,31 @@
+CREATE TABLE owners (
+    owner_id INT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    email VARCHAR(100)  NOT NULL,
+    phone VARCHAR(15),
+    address TEXT
+);
+
+CREATE TABLE pets (
+    pet_id INT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    species VARCHAR(50) NOT NULL,
+    breed VARCHAR(100),
+    age INT,
+    gender VARCHAR(10) CHECK (gender IN ('Male', 'Female')),
+    owner_id INT,
+    medical_history TEXT,
+    date_registered DATETIME DEFAULT GETDATE(),
+    FOREIGN KEY (owner_id) REFERENCES owners(owner_id) ON DELETE CASCADE
+);
+
+CREATE TABLE appointments (
+    appointment_id INT PRIMARY KEY,
+    pet_id INT,
+    owner_id INT,
+    appointment_date DATETIME NOT NULL,
+    type VARCHAR(20) CHECK (type IN ('Surgery', 'Grooming', 'Vaccination', 'Check-up')),
+    status VARCHAR(20) CHECK (status IN ('Scheduled', 'Completed', 'Cancelled')),
+    FOREIGN KEY (pet_id) REFERENCES pets(pet_id) ON DELETE CASCADE,
+    FOREIGN KEY (owner_id) REFERENCES owners(owner_id)
+);
